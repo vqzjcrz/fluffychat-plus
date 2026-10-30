@@ -30,6 +30,7 @@ data class AppSettings(
     val animateMedia: Boolean = true,
     val sendTyping: Boolean = true,
     val syncReadState: Boolean = true,
+    val notifications: Boolean = true,
 )
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
@@ -48,6 +49,7 @@ class SettingsStore(private val context: Context) {
         val ANIMATE_MEDIA = booleanPreferencesKey("animate_media")
         val SEND_TYPING = booleanPreferencesKey("send_typing")
         val SYNC_READ = booleanPreferencesKey("sync_read")
+        val NOTIFICATIONS = booleanPreferencesKey("notifications")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { read(it) }
@@ -71,6 +73,7 @@ class SettingsStore(private val context: Context) {
             animateMedia = p[Keys.ANIMATE_MEDIA] ?: d.animateMedia,
             sendTyping = p[Keys.SEND_TYPING] ?: d.sendTyping,
             syncReadState = p[Keys.SYNC_READ] ?: d.syncReadState,
+            notifications = p[Keys.NOTIFICATIONS] ?: d.notifications,
         )
     }
 
@@ -88,5 +91,6 @@ class SettingsStore(private val context: Context) {
         p[Keys.ANIMATE_MEDIA] = s.animateMedia
         p[Keys.SEND_TYPING] = s.sendTyping
         p[Keys.SYNC_READ] = s.syncReadState
+        p[Keys.NOTIFICATIONS] = s.notifications
     }
 }

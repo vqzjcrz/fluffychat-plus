@@ -141,6 +141,15 @@ data class GuildUi(
 
 data class Unread(val unread: Boolean = false, val mentions: Int = 0)
 
+/** A message worth raising a system notification for (DM or mention). */
+data class NotifyEvent(
+    val channelId: String,
+    val title: String,
+    val body: String,
+    val isDm: Boolean,
+    val avatarUrl: String,
+)
+
 data class Typist(val userId: String, val name: String, val until: Long)
 
 data class ChannelMessages(

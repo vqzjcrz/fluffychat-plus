@@ -111,6 +111,11 @@ class DiscordRepository(
     private val _typing = MutableStateFlow<Map<String, List<Typist>>>(emptyMap())
     private val _authFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val authFailed: SharedFlow<Unit> = _authFailed.asSharedFlow()
+    private val _notifications = MutableSharedFlow<NotifyEvent>(extraBufferCapacity = 64)
+    val notifications: SharedFlow<NotifyEvent> = _notifications.asSharedFlow()
+
+    @Volatile var notifyEnabled = true
+    @Volatile var serviceActive = false
 
     // Confined to [state].
     private val guildData = LinkedHashMap<String, GuildData>()
@@ -167,7 +172,9 @@ class DiscordRepository(
     fun onBackground() {
         inForeground = false
         backgroundJob?.cancel()
-        // Keep the socket for a bit so quick app switches don't reconnect.
+        // With the notification service running, stay connected in the background.
+        if (serviceActive) return
+        // Otherwise keep the socket briefly so quick app switches don't reconnect.
         backgroundJob = scope.launch {
             delay(90_000)
             gateway.stop(keepSession = true)
@@ -477,6 +484,17 @@ class DiscordRepository(
         m.member?.nick?.let { nicks["$gid:${m.author.id}"] = it }
     }
 
+    private fun notifyBody(m: Message): String {
+        val t = m.content.replace('\n', ' ').trim()
+        return when {
+            t.isNotEmpty() -> t
+            m.attachments.isNotEmpty() -> "📎 Attachment"
+            m.stickerItems.isNotEmpty() -> "Sticker"
+            m.embeds.isNotEmpty() -> "Shared a link"
+            else -> "New message"
+        }
+    }
+
     private fun onMessageCreate(d: JsonObject) {
         val msg = runCatching { json.decodeFromJsonElement(Message.serializer(), d) }.getOrNull() ?: return
         rememberUsers(msg, null)
@@ -507,13 +525,28 @@ class DiscordRepository(
             }
             channel != null -> {
                 val selfRoles = gid?.let { guildData[it]?.selfRoles }.orEmpty()
-                val mentioned = gid == null ||
+                val isDm = channel.guildId == null
+                val mentioned = isDm ||
                     msg.mentionEveryone ||
                     msg.mentions.any { it.id == meId } ||
                     msg.mentionRoles.any { it in selfRoles }
                 _unread.update { map ->
                     val current = map[msg.channelId]
                     map + (msg.channelId to Unread(true, (current?.mentions ?: 0) + if (mentioned) 1 else 0))
+                }
+                // Notify for DMs and mentions (muted channels/guilds stay quiet).
+                if (notifyEnabled && mentioned && !isMuted(channel)) {
+                    val authorName = gid?.let { nickFor(it, msg.author.id) } ?: msg.member?.nick ?: msg.author.displayName
+                    val title = if (isDm) authorName else "$authorName  •  #${channel.name ?: "unknown"}"
+                    _notifications.tryEmit(
+                        NotifyEvent(
+                            channelId = msg.channelId,
+                            title = title,
+                            body = notifyBody(msg),
+                            isDm = isDm,
+                            avatarUrl = Cdn.avatar(msg.author, 128, animate = false),
+                        ),
+                    )
                 }
             }
         }

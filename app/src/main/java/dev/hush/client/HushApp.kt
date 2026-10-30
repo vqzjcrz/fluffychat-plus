@@ -13,6 +13,11 @@ import dev.hush.client.data.SettingsStore
 import dev.hush.client.data.TokenStore
 import dev.hush.client.discord.DiscordHeaders
 import dev.hush.client.discord.DiscordRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -44,11 +49,25 @@ class HushApp : Application(), ImageLoaderFactory {
         settingsStore = SettingsStore(this)
         repository = DiscordRepository(http, json, tokenStore)
 
-        // Connect while the app is visible; the repository disconnects a while after it's backgrounded.
+        // Connect while the app is visible; the repository disconnects a while after it's backgrounded
+        // (unless the notification service is keeping it alive).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = repository.onForeground()
             override fun onStop(owner: LifecycleOwner) = repository.onBackground()
         })
+
+        // Run the background notification service while signed in with notifications on.
+        val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        appScope.launch {
+            combine(tokenStore.token, settingsStore.settings) { token, s -> token to s }
+                .collect { (token, s) ->
+                    repository.notifyEnabled = s.notifications
+                    runCatching {
+                        if (token != null && s.notifications) HushService.start(this@HushApp)
+                        else HushService.stop(this@HushApp)
+                    }
+                }
+        }
     }
 
     override fun newImageLoader(): ImageLoader =

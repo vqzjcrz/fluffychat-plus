@@ -156,6 +156,13 @@ fun SettingsScreen(vm: AppViewModel) {
                 update { it.copy(animateMedia = v) }
             }
 
+            SectionTitle("Notifications")
+            Toggle(
+                "Notifications",
+                "Alert on DMs and mentions. Keeps Hush running in the background.",
+                s.notifications,
+            ) { v -> update { it.copy(notifications = v) } }
+
             SectionTitle("Privacy")
             Toggle("Typing indicator", "Let others see when you're typing", s.sendTyping) { v ->
                 update { it.copy(sendTyping = v) }
