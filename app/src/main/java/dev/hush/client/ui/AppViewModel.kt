@@ -36,8 +36,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+enum class Tab { MESSAGES, SERVERS, MENTIONS, YOU }
+
 sealed interface Route {
     data object Home : Route
+    data class ServerChannels(val guildId: String) : Route
     data class Chat(val channelId: String) : Route
     data object Settings : Route
 }
@@ -56,7 +59,10 @@ class AppViewModel(private val app: HushApp) : ViewModel() {
     val connection: StateFlow<ConnectionState> = repo.connection
 
     var route by mutableStateOf<Route>(Route.Home)
+        private set
+    var tab by mutableStateOf(Tab.MESSAGES)
     var selectedGuildId by mutableStateOf<String?>(null)
+    private val backStack = ArrayDeque<Route>()
 
     var sessionExpired by mutableStateOf(false)
         private set
@@ -116,7 +122,9 @@ class AppViewModel(private val app: HushApp) : ViewModel() {
     fun logout() {
         repo.logout()
         app.tokenStore.clear()
+        backStack.clear()
         route = Route.Home
+        tab = Tab.MESSAGES
         selectedGuildId = null
         replyTo = null
         editing = null
@@ -125,15 +133,27 @@ class AppViewModel(private val app: HushApp) : ViewModel() {
 
     // ---------------------------------------------------------------- navigation
 
+    private fun navigate(r: Route) {
+        if (route != r) backStack.addLast(route)
+        route = r
+    }
+
     fun openChannel(id: String) {
         replyTo = null
         editing = null
         attachments.clear()
-        route = Route.Chat(id)
+        navigate(Route.Chat(id))
     }
 
+    fun openServer(guildId: String) {
+        selectedGuildId = guildId
+        navigate(Route.ServerChannels(guildId))
+    }
+
+    fun openSettings() = navigate(Route.Settings)
+
     fun back() {
-        route = Route.Home
+        route = backStack.removeLastOrNull() ?: Route.Home
     }
 
     fun findChannel(id: String): ChannelUi? =

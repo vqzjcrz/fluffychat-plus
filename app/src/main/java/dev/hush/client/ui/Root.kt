@@ -15,7 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hush.client.ui.chat.ChatScreen
-import dev.hush.client.ui.home.HomeScreen
+import dev.hush.client.ui.home.HomeShell
+import dev.hush.client.ui.home.ServerChannelsScreen
 import dev.hush.client.ui.login.LoginScreen
 import dev.hush.client.ui.settings.SettingsScreen
 import dev.hush.client.ui.theme.LocalPalette
@@ -45,7 +46,8 @@ private fun MainShell(vm: AppViewModel) {
         label = "route",
     ) { target ->
         when (target) {
-            Route.Home -> HomeScreen(vm)
+            Route.Home -> HomeShell(vm)
+            is Route.ServerChannels -> ServerChannelsScreen(vm, target.guildId)
             is Route.Chat -> ChatScreen(vm, target.channelId)
             Route.Settings -> SettingsScreen(vm)
         }
