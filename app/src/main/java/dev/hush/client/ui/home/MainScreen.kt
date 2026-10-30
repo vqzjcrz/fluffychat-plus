@@ -273,7 +273,7 @@ private fun ServerTile(g: GuildUi, unread: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Text(
             text = g.name,
-            color = p.subtext,
+            color = p.muted,
             fontSize = 12.sp,
             maxLines = 2,
             textAlign = TextAlign.Center,
@@ -362,7 +362,7 @@ private fun YouTab(vm: AppViewModel) {
             Spacer(Modifier.height(14.dp))
             Text(me?.displayName ?: "…", color = p.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             me?.username?.let { Text("@$it", color = p.muted, fontSize = 14.sp) }
-            Text(label, color = p.subtext, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+            Text(label, color = p.muted, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
         }
         Spacer(Modifier.height(8.dp))
         YouRow("Settings", "Themes, layout, notifications, privacy") { vm.openSettings() }
