@@ -26,7 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
@@ -113,7 +113,7 @@ private fun BottomBar(
                 .height(60.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NavItem(Modifier.weight(1f), Icons.AutoMirrored.Filled.Message, "Messages", tab == Tab.MESSAGES, dot = dmActivity) { onSelect(Tab.MESSAGES) }
+            NavItem(Modifier.weight(1f), Icons.Default.Email, "Messages", tab == Tab.MESSAGES, dot = dmActivity) { onSelect(Tab.MESSAGES) }
             NavItem(Modifier.weight(1f), Icons.AutoMirrored.Filled.List, "Servers", tab == Tab.SERVERS, dot = serverActivity) { onSelect(Tab.SERVERS) }
             NavItem(Modifier.weight(1f), Icons.Default.Notifications, "Mentions", tab == Tab.MENTIONS, count = mentions) { onSelect(Tab.MENTIONS) }
             NavItem(Modifier.weight(1f), Icons.Default.Person, "You", tab == Tab.YOU) { onSelect(Tab.YOU) }

@@ -23,7 +23,20 @@ jobs:
       - name: Build debug and release APKs
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug assembleRelease
+          set -o pipefail
+          ./gradlew --no-daemon assembleDebug assembleRelease 2>&1 | tee build.log
+
+      - name: Publish build log on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          grep -E "^e: |error:|> Task .*FAILED|FAILURE:|What went wrong" build.log | head -c 40000 > build-error.txt || true
+          tail -c 60000 build.log > build-tail.txt
+          gh release delete buildlog --cleanup-tag --yes 2>/dev/null || true
+          gh release create buildlog build-error.txt build-tail.txt \
+            --title "Build log (run ${{ github.run_number }})" --notes "Compile errors from the latest failed build." || \
+          gh release upload buildlog build-error.txt build-tail.txt --clobber
 
       - name: Collect APKs
         run: |
