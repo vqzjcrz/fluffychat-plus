@@ -41,16 +41,17 @@ installs directly.
 
 ## Signing in
 
-Hush signs in with your account token:
+Tap **Log in with Discord**. Discord's own login page opens inside Hush; sign in as usual
+(email/phone, password, 2FA and captcha all work). Hush picks up your session token
+automatically, stores it encrypted with an Android Keystore key, and wipes the login page's
+cookies and storage afterward. Your password is never stored.
 
-1. On a computer, sign in at discord.com in a browser.
-2. Press F12 → **Network** tab.
-3. Open any channel, filter for `messages`, select a request.
-4. Under **Request Headers**, copy the `authorization` value.
-5. Paste it into Hush.
+Prefer pasting a token? Tap **Use a token instead**. On a computer, open discord.com, press
+F12 → **Network**, open a channel, filter for `messages`, select a request, and copy the
+`authorization` request header.
 
-The token is encrypted with an Android Keystore key and only sent to Discord. Anyone with your
-token has full access to your account, so never share it. Changing your password resets it.
+Anyone with your token has full access to your account, so never share it. Logging out of
+Discord elsewhere doesn't sign Hush out; changing your password does.
 
 ## Limitations
 

@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.webkit:webkit:1.12.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")

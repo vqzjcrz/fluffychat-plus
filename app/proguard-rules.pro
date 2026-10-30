@@ -8,3 +8,8 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 -keep,includedescriptorclasses class dev.hush.client.**$$serializer { *; }
+
+# WebView login bridge
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
