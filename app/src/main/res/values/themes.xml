@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="hush_bg">#FF101216</color>
-    <color name="ic_launcher_background">#FF101216</color>
-
-    <style name="Theme.Hush" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/hush_bg</item>
+    <style name="Theme.Sift" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>

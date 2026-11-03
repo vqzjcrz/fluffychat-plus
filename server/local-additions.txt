@@ -1,0 +1,3 @@
+# Your own IOCs. One domain or full URL per line. Merged into every build.
+# example-bad-domain.test
+# https://compromised.example/wp-content/x.php

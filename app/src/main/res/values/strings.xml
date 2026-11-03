@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Hush</string>
+    <string name="app_name">Sift</string>
+    <string name="share_target_label">Scan with Sift</string>
+    <string name="process_text_label">Scan link with Sift</string>
 </resources>

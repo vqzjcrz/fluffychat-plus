@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Self-hosted build: network is used ONLY to download a blocklist from a server you configure.
+  Scanned links are never sent anywhere. Cleartext is allowed so a LAN / Tailscale box on plain http works.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:usesCleartextTraffic="true" />
+</manifest>

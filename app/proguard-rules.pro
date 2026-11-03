@@ -1,15 +1,3 @@
-# kotlinx.serialization
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.**
--keepclassmembers class dev.hush.client.** {
-    *** Companion;
-}
--keepclasseswithmembers class dev.hush.client.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
--keep,includedescriptorclasses class dev.hush.client.**$$serializer { *; }
-
-# WebView login bridge
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}
+# Sift has no reflection-based code. Keep line numbers for readable crash traces.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

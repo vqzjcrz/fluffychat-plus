@@ -1,79 +1,75 @@
-# Hush
+# Sift
 
-A quiet, minimal Discord client for Android, built with Kotlin and Jetpack Compose.
+On-device link scanner for Android. Share a URL to Sift (or select one and pick **Scan link with Sift**) and it tells you whether the link itself looks like phishing, an exploit, or malware — **without ever opening, resolving, or uploading it**.
 
-## Features
+## Two builds
 
-- Servers, channels, DMs and group DMs, with permission-aware channel lists
-- Real-time messages over the gateway (zlib-compressed, auto-resume, backoff)
-- Discord markdown: bold, italic, underline, strikethrough, spoilers (tap to reveal),
-  inline code, code blocks, quotes, headings, masked links, mentions, timestamps
-- Custom emoji (animated too), stickers, image attachments, link embeds, reactions
-- Replies (with @ ping toggle), edit, delete, copy text/link, quick reactions
-- Image/video uploads (up to 10 per message), typing indicators, unread dots and mention badges
-- Read-state sync with your other devices (can be turned off)
-- Image viewer with pinch-to-zoom
+| APK | Network | Use it if |
+|---|---|---|
+| `Sift-offline.apk` | **None.** The `INTERNET` permission is stripped from the manifest; Android blocks every socket. CI fails the build if it ever sneaks back in. | You want zero network, period. You can still import a blocklist file by hand. |
+| `Sift-selfhosted.apk` | One plain `GET` to **your** server for a blocklist text file. Nothing about scanned links is ever sent. | You run the Pi server in `server/` and want the list to stay fresh automatically. |
 
-### Customization
-- 12 themes: Material You (Android 12+), Midnight, AMOLED, Classic, Nord, Dracula,
-  Mocha, Gruvbox, Rosé Pine, Tokyo Night, Paper, Solarized
-- Accent color override (9 swatches or the theme's own)
-- Cozy or compact message layout
-- Circle, rounded or square avatars
-- Text size 85–130%
-- Toggles for avatars, 24-hour time, image previews, embeds, GIF/emoji animation,
-  typing indicator and read sync
-- Live preview at the top of Settings
+Both can be installed side by side (`app.sift` and `app.sift.selfhosted`).
 
-## Build
+## What it checks
 
-1. Install Android Studio (Ladybug or newer).
-2. **File → Open** and choose this `Hush` folder. Let Gradle sync (it downloads Gradle 8.11.1,
-   AGP 8.7.3 and the libraries on first run).
-3. Plug in your phone with USB debugging on and press **Run**, or use
-   **Build → Build APK(s)** and sideload `app/build/outputs/apk/debug/app-debug.apk`.
+- **Fake destinations** — `paypal.com@evil.net`, `paypal.com.secure-login.ru`, decimal/hex/octal IPs (`http://3232235777`), raw IPs, localhost / router / LAN targets, cloud-metadata addresses
+- **Lookalikes** — punycode/IDN homographs (Cyrillic `аррӏе.com`), mixed alphabets, typosquats (`paypa1`, `steamcommunlty`), brand names on domains the brand doesn't own (~80 commonly phished brands incl. USAA, Navy Federal, DFAS/myPay, IPPS-A, TRICARE)
+- **Hosting** — URL shorteners, IP loggers (Grabify etc.), ngrok/Cloudflare tunnels and dynamic DNS, free site builders, IPFS, high-abuse TLDs, `.zip`/`.mov` domains
+- **Hidden characters** — right-to-left override, zero-width chars, tabs/newlines, double and pointless percent-encoding
+- **Attack payloads** — XSS, SQLi, command injection, path traversal + sensitive files, SSRF, Log4Shell/JNDI, SSTI/OGNL, CRLF, PHP wrappers, NoSQL, prototype pollution, serialized objects, XXE
+- **Downloads** — APK, executables/scripts, disk images, macro docs, config profiles, double extensions (`Invoice.pdf.exe`)
+- **Redirects** — unwraps redirect params, base64-encoded targets, Google/Facebook/Outlook SafeLinks/Proofpoint wrappers, `intent://` fallback URLs, URLs glued into paths — and scans the destination too
+- **Schemes** — `javascript:` (incl. `javascript://%0a…`), `data:text/html`, `intent://`, USSD codes in `tel:`, `ms-msdt:` and other abused handlers
+- **Privacy** — tracking params (one-tap **Copy clean link**), email addresses embedded in the link (plain or base64)
+- **Your blocklist** — hosts files, plain domain lists, AdBlock `||domain^`, full URLs
 
-Command line: `./gradlew assembleDebug` (needs a JDK 17+ and the Android SDK; Android Studio's
-bundled JDK works).
+Uses the full Public Suffix List (bundled, refreshed on each CI build) to find the real owner domain, and highlights it in the UI.
 
-The release build (`./gradlew assembleRelease`) is minified and signed with the debug key so it
-installs directly.
+Also handy for IOC work: it accepts defanged input (`hxxps[://]evil[.]com`) and has **Copy defanged** / **Share report** (report uses the defanged link).
 
-## Signing in
+**Limits:** it judges the link, not the page. Because it never visits anything, it can't see where a shortener goes or what a clean-looking page asks for.
 
-Tap **Log in with Discord**. Discord's own login page opens inside Hush; sign in as usual
-(email/phone, password, 2FA and captcha all work). Hush picks up your session token
-automatically, stores it encrypted with an Android Keystore key, and wipes the login page's
-cookies and storage afterward. Your password is never stored.
+## Build (GitHub Actions)
 
-Prefer pasting a token? Tap **Use a token instead**. On a computer, open discord.com, press
-F12 → **Network**, open a channel, filter for `messages`, select a request, and copy the
-`authorization` request header.
+Same flow as Hush:
 
-Anyone with your token has full access to your account, so never share it. Logging out of
-Discord elsewhere doesn't sign Hush out; changing your password does.
+1. Create a **private** repo (e.g. `Sift`) and push this folder to `main`.
+2. Actions → **Build APKs** runs tests, builds both APKs, verifies the offline one has no network permission, and publishes a Release `build-N` with `Sift-offline.apk` and `Sift-selfhosted.apk`.
+3. Download on the Pixel → install (allow "Install unknown apps" for your browser/Files once).
 
-## Limitations
+No Gradle wrapper jar is committed; CI provides Gradle 8.11.1. Locally, open in Android Studio or run `gradle assembleOfflineRelease` with Gradle 8.11+ and JDK 17.
 
-- No voice/video calls, threads, or forum channels (those are hidden).
-- No push notifications. Discord's push service only talks to the official app, so Hush is
-  connected while it's open and for about 90 seconds after you leave it.
-- Server folders and ordering from your Discord settings aren't applied.
+### Signing
 
-## Disclaimer
+`keystore/sift-release.jks` (alias `sift`, password `siftsift`) is a personal key so every CI build signs identically and updates install over the old version. It's fine in a private repo. To use your own key instead, add repo secrets `SIFT_KEYSTORE_BASE64` (`base64 -w0 your.jks`), `SIFT_KEYSTORE_PASSWORD`, `SIFT_KEY_ALIAS`, `SIFT_KEY_PASSWORD` — but switching keys means uninstalling the old build once.
 
-Third-party clients are against Discord's Terms of Service. Hush only does what a normal user
-does (no automation), but use it at your own risk. Hush is not affiliated with Discord.
+## Self-hosted blocklist (Pi)
 
-## Project layout
+`server/` has everything; only Python 3 + curl needed. The **Pi** pulls public feeds (URLhaus, ThreatFox, Phishing Army, OpenPhish, Block List Project); the phone only talks to the Pi.
+
+```bash
+sudo mkdir -p /opt/sift && sudo cp server/* /opt/sift/ && sudo chown -R pi:pi /opt/sift
+/opt/sift/build-blocklist.sh /opt/sift/www          # first build
+sudo cp /opt/sift/*.service /opt/sift/*.timer /etc/systemd/system/
+# optional: set Environment=SIFT_TOKEN=<random> in sift-blocklist.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now sift-blocklist.service sift-blocklist-update.timer
+```
+
+Then in the self-hosted app: Settings → Blocklist URL `http://<pi-ip-or-tailscale-name>:8088/blocklist.txt` (+ token if set) → **Sync now**. Turn on **Sync on launch** to refresh when the list is >24h old.
+
+Put your own IOCs in `/opt/sift/local-additions.txt`; they're merged on every rebuild.
+
+Plain http is allowed in the self-hosted build so a LAN/Tailscale Pi works without certificates. Over the open internet, put it behind HTTPS.
+
+## Layout
 
 ```
-app/src/main/java/dev/hush/client/
-  HushApp.kt, MainActivity.kt
-  data/        TokenStore (encrypted token), Settings (DataStore)
-  discord/     Models, Rest, Gateway, Repository, Cdn
-  ui/          AppViewModel, Root, Format
-    theme/     Palettes and HushTheme
-    components/ Avatars, icons, badges
-    login/ home/ chat/ settings/
+app/src/main/java/app/sift/engine/   pure-Kotlin analyzer (no Android deps, unit-tested)
+app/src/main/java/app/sift/          activity, view model, blocklist storage/sync
+app/src/main/java/app/sift/ui/       Compose UI
+app/src/offline/AndroidManifest.xml  strips INTERNET
+app/src/selfhosted/AndroidManifest.xml adds INTERNET (+cleartext for LAN)
+server/                              Pi blocklist builder + server + systemd units
 ```

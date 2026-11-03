@@ -1,0 +1,10 @@
+# /etc/systemd/system/sift-blocklist-update.service
+[Unit]
+Description=Rebuild Sift blocklist from public feeds
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+ExecStart=/opt/sift/build-blocklist.sh /opt/sift/www

@@ -1,0 +1,19 @@
+# /etc/systemd/system/sift-blocklist.service
+[Unit]
+Description=Sift blocklist server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/opt/sift
+Environment=SIFT_TOKEN=
+ExecStart=/usr/bin/python3 /opt/sift/serve.py --port 8088 --dir /opt/sift/www
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadOnlyPaths=/opt/sift
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
