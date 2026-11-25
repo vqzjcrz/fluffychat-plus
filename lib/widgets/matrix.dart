@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/client_manager.dart';
+import 'package:fluffychat/utils/home_widget_sync.dart';
 import 'package:fluffychat/utils/init_with_restore.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_file_extension.dart';
 import 'package:fluffychat/utils/notification_background_handler.dart';
@@ -180,6 +181,7 @@ class MatrixState extends State<Matrix> {
   final onNotification = <String, StreamSubscription>{};
   final onReceipts = <String, StreamSubscription>{};
   final onSnoozeUpdate = <String, StreamSubscription>{};
+  final onHomeWidgetSync = <String, StreamSubscription>{};
   final onLogoutSub = <String, StreamSubscription<LoginState>>{};
   final onUiaRequest = <String, StreamSubscription<UiaRequest>>{};
 
@@ -307,6 +309,16 @@ class MatrixState extends State<Matrix> {
               false,
         )
         .listen((_) => c.mirrorSnoozeToStore());
+    if (PlatformInfos.isAndroid) {
+      onHomeWidgetSync[name] ??= c.onSync.stream.listen(
+        (syncUpdate) => HomeWidgetSync.onSync(
+          syncUpdate,
+          widget.clients,
+          // ignore: use_build_context_synchronously
+          L10n.of(context),
+        ),
+      );
+    }
     onReceipts[name] ??= c.onSync.stream.listen(
       (syncUpdate) => cancelNotificationsOnSync(
         syncUpdate,
@@ -332,6 +344,8 @@ class MatrixState extends State<Matrix> {
     onReceipts.remove(name);
     onSnoozeUpdate[name]?.cancel();
     onSnoozeUpdate.remove(name);
+    onHomeWidgetSync[name]?.cancel();
+    onHomeWidgetSync.remove(name);
   }
 
   Future<void> initMatrix() async {
@@ -396,6 +410,14 @@ class MatrixState extends State<Matrix> {
       backgroundPush?.openRoomFromNotification(newActivity: true);
     }
     final foreground = state == AppLifecycleState.resumed;
+    if (PlatformInfos.isAndroid && mounted) {
+      if (foreground) {
+        HomeWidgetSync.requestFullRefresh(widget.clients, L10n.of(context));
+      } else if (state == AppLifecycleState.paused) {
+        // Syncing stops in the background, so leave the widgets current.
+        HomeWidgetSync.refreshNow(widget.clients, L10n.of(context));
+      }
+    }
     for (final client in widget.clients) {
       client.syncPresence = state == AppLifecycleState.resumed
           ? null
@@ -434,6 +456,10 @@ class MatrixState extends State<Matrix> {
       sub.cancel();
     }
     onSnoozeUpdate.clear();
+    for (final sub in onHomeWidgetSync.values) {
+      sub.cancel();
+    }
+    onHomeWidgetSync.clear();
     onRoomKeyRequestSub.clear();
     onKeyVerificationRequestSub.clear();
     onLogoutSub.clear();

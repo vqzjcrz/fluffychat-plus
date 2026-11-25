@@ -3003,5 +3003,9 @@
     "defaultTheme": "Default",
     "@defaultTheme": {
         "description": "Name of the default theme in the theme picker"
+    },
+    "directChat": "Direct chat",
+    "@directChat": {
+        "description": "Label for a one-on-one chat in the home screen widget chat picker"
     }
 }

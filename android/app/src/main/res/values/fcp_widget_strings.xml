@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fcp_widget_label">FluffyChat+ chat</string>
+    <string name="fcp_widget_description">Recent messages from a chat you pick</string>
+    <string name="fcp_widget_change_chat">Change chat</string>
+    <string name="fcp_widget_not_configured">Tap to pick a chat</string>
+    <string name="fcp_widget_open_app">Open FluffyChat+ to load this chat</string>
+    <string name="fcp_widget_no_messages">No messages yet</string>
+    <string name="fcp_widget_configure_title">Pick a chat for this widget</string>
+    <string name="fcp_widget_search_hint">Search chats</string>
+    <string name="fcp_widget_no_rooms">No chats yet. Open FluffyChat+ once so it can list your chats, then try again.</string>
+    <string name="fcp_widget_no_match">No chats match</string>
+</resources>

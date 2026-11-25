@@ -137,6 +137,33 @@
              android:exported="false">
         </service>
 
+        <!-- FluffyChat+ home screen widget showing one chat -->
+        <receiver
+            android:name=".ChatWidgetProvider"
+            android:exported="false"
+            android:label="@string/fcp_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fcp_chat_widget_info" />
+        </receiver>
+        <service
+            android:name=".ChatWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <activity
+            android:name=".ChatWidgetConfigureActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/FcpWidgetConfigTheme">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- From flutter_local_notifications package for notification actions -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
 

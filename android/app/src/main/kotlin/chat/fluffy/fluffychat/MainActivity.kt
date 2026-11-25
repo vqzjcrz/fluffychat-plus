@@ -31,7 +31,11 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         var engine: FlutterEngine? = null
         fun provideEngine(context: Context): FlutterEngine {
-            val eng = engine ?: FlutterEngine(context, emptyArray(), true, false)
+            val eng = engine ?: FlutterEngine(context, emptyArray(), true, false).also {
+                // FluffyChat+ home screen widgets get their data over this engine,
+                // which the app and the push handler share.
+                WidgetBridge.register(context, it)
+            }
             engine = eng
             return eng
         }

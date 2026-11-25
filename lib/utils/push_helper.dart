@@ -14,6 +14,7 @@ import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/call_kit_params.dart';
 import 'package:fluffychat/utils/client_manager.dart';
+import 'package:fluffychat/utils/home_widget_sync.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/notification_avatar_extension.dart';
@@ -146,6 +147,7 @@ Future<void> _tryPushHelper(
 
   if (event == null) {
     Logs().v('Notification is a clearing indicator.');
+    if (notification.counts?.unread == 0) await HomeWidgetSync.onAllRead();
     if (client.syncPending) return;
     if (clients?.length == 1 && (notification.counts?.unread == 0)) {
       await flutterLocalNotificationsPlugin.cancelAll();
@@ -168,6 +170,8 @@ Future<void> _tryPushHelper(
   }
 
   Logs().v('Push helper got notification event of type ${event.type}.');
+
+  await HomeWidgetSync.onPushEvent(event, l10n);
 
   if (!client.pushruleEvaluator.match(event).notify) {
     Logs().i('Push helper: filtered by client-side push rules.');

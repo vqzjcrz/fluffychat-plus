@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 An unofficial fork of [FluffyChat](https://github.com/krille-chan/fluffychat), the open
 source [Matrix](https://matrix.org) client by Christian Kußowski. FluffyChat+ adds
 better space organization (sorting, pinning, reordering), snoozing, read-only chat
-handling and preset themes.
+handling, preset themes and a home screen chat widget.
 
 Everything else (messaging, encryption, calls, notifications, settings) is FluffyChat,
 unchanged. This fork is not affiliated with or endorsed by the FluffyChat project.
@@ -56,6 +56,18 @@ Please report problems with this fork here, not to FluffyChat.
   Catppuccin, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Everforest and One Dark.
   Each has a light and a dark variant except AMOLED Black, which is dark only and
   keeps your accent color. Picking an accent color switches back to Default.
+
+### Home screen widget
+
+- **Chat widget:** add **FluffyChat+ chat** from your launcher's widget list and pick a
+  chat. The widget shows that chat's recent messages and unread count (red when you're
+  mentioned). Tap it to open the chat.
+- **One chat per widget, changeable any time:** add as many widgets as you like, each
+  with its own chat. Tap the ⇄ button on a widget (or long-press it and choose
+  **Reconfigure** on Android 12+) to switch it to another chat. No rebuild needed.
+- Widgets update while the app is open, when a notification arrives, and when you
+  leave the app. Messages are stored only in the app's private storage on the phone.
+- Colors follow your wallpaper (Material You) on Android 12 and newer.
 
 ### Synced with your account
 
@@ -107,6 +119,10 @@ New files:
 - `lib/widgets/snooze_dialog.dart`: the snooze picker
 - `lib/pages/chat/read_only_composer_note.dart`: the note that replaces the message box
 - `lib/config/theme_presets.dart`: the preset themes
+- `lib/utils/home_widget_sync.dart`: sends chats and messages to the home screen widgets
+- `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
+  `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget
+  and its chat picker
 
 Changed files:
 
@@ -117,7 +133,9 @@ Changed files:
   lock and snooze icons
 - `lib/pages/chat/chat.dart`, `chat_view.dart`: read-only note
 - `lib/utils/push_helper.dart`, `lib/widgets/local_notifications_extension.dart`,
-  `lib/widgets/matrix.dart`: drop notifications from snoozed chats
+  `lib/widgets/matrix.dart`: drop notifications from snoozed chats, update widgets
+- `android/app/src/main/kotlin/chat/fluffy/fluffychat/MainActivity.kt`,
+  `AndroidManifest.xml`: widget channel and components
 - `lib/utils/client_manager.dart`: loads bridge info at startup
 - `lib/config/themes.dart`, `setting_keys.dart`, `lib/widgets/theme_builder.dart`,
   `lib/pages/settings_style/`: preset themes

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fcp_widget_background">#FF1D1B20</color>
+    <color name="fcp_widget_text">#FFE6E0E9</color>
+    <color name="fcp_widget_text_secondary">#FFCAC4D0</color>
+    <color name="fcp_widget_accent">#FFD0BCFF</color>
+    <color name="fcp_widget_badge">#FFD0BCFF</color>
+    <color name="fcp_widget_on_badge">#FF381E72</color>
+    <color name="fcp_widget_mention">#FFF2B8B5</color>
+    <color name="fcp_widget_on_mention">#FF601410</color>
+</resources>
