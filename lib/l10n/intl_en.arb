@@ -3007,5 +3007,9 @@
     "directChat": "Direct chat",
     "@directChat": {
         "description": "Label for a one-on-one chat in the home screen widget chat picker"
+    },
+    "openSpaceOnStart": "Open this space on start",
+    "@openSpaceOnStart": {
+        "description": "Space menu toggle that makes the app open on this space"
     }
 }

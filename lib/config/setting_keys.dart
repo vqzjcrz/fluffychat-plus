@@ -58,6 +58,9 @@ enum AppSettings<T> {
   colorSchemeSeedInt<int>('chat.fluffy.color_scheme_seed', 0xFF5625BA),
   // FluffyChat+ preset theme id, empty for the default seed-based theme
   themePreset<String>('im.fluffychat.plus.theme_preset', ''),
+  // FluffyChat+ space the app opens on: the favorite if set, else the last one
+  favoriteSpace<String>('im.fluffychat.plus.favorite_space', ''),
+  lastSpace<String>('im.fluffychat.plus.last_space', ''),
   emojiSuggestionLocale<String>('emoji_suggestion_locale', ''),
   enableSoftLogout<bool>('chat.fluffy.enable_soft_logout', true),
   enableMatrixNativeOIDC<bool>('chat.fluffy.enable_matrix_native_oidc', true),

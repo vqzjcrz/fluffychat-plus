@@ -104,6 +104,33 @@ class ChatListController extends State<ChatList>
     setState(() {
       _activeSpaceId = spaceId;
     });
+    AppSettings.lastSpace.setItem(spaceId);
+  }
+
+  static bool _startSpaceRestored = false;
+
+  /// Opens the favorite space when the app starts, or else the space that
+  /// was open last.
+  Future<void> _restoreStartSpace() async {
+    if (_startSpaceRestored) return;
+    _startSpaceRestored = true;
+    final client = Matrix.of(context).client;
+    await client.roomsLoading;
+    if (!mounted || _activeSpaceId != null) return;
+    for (final spaceId in [
+      AppSettings.favoriteSpace.value,
+      AppSettings.lastSpace.value,
+    ]) {
+      if (spaceId.isEmpty) continue;
+      final space = client.getRoomById(spaceId);
+      if (space == null ||
+          !space.isSpace ||
+          space.membership != Membership.join) {
+        continue;
+      }
+      await setActiveSpace(spaceId);
+      return;
+    }
   }
 
   void clearActiveSpace() => setState(() {
@@ -434,6 +461,8 @@ class ChatListController extends State<ChatList>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.activeSpace != null) {
         setActiveSpace(widget.activeSpace!);
+      } else {
+        _restoreStartSpace();
       }
       if (mounted) {
         searchServer = Matrix.of(

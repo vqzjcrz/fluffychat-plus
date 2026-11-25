@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/active_call_indicator.dart';
 import 'package:fluffychat/pages/chat_list/unread_bubble.dart';
@@ -55,6 +56,7 @@ enum SpaceActions {
   markAllRead,
   muteAll,
   unmuteAll,
+  toggleFavorite,
   leave,
 }
 
@@ -361,6 +363,14 @@ class _SpaceViewState extends State<SpaceView> {
         await showFutureLoadingDialog(
           context: context,
           future: () => client.setCustomChildOrder(widget.spaceId, null),
+        );
+        if (!mounted) return;
+        setState(() {});
+        break;
+      case SpaceActions.toggleFavorite:
+        final isFavorite = AppSettings.favoriteSpace.value == widget.spaceId;
+        await AppSettings.favoriteSpace.setItem(
+          isFavorite ? '' : widget.spaceId,
         );
         if (!mounted) return;
         setState(() {});
@@ -1022,6 +1032,7 @@ class _SpaceViewState extends State<SpaceView> {
     final displayname = room?.getLocalizedDisplayname() ?? l10n.nothingFound;
     const avatarSize = Avatar.defaultSize / 1.5;
     final isAdmin = room?.canChangeStateEvent(EventTypes.SpaceChild) == true;
+    final isFavorite = AppSettings.favoriteSpace.value == widget.spaceId;
     return Scaffold(
       body: room == null
           ? const Center(child: Icon(Icons.search_outlined, size: 80))
@@ -1173,6 +1184,20 @@ class _SpaceViewState extends State<SpaceView> {
                                 child: ListTile(
                                   leading: const Icon(Icons.settings_outlined),
                                   title: Text(l10n.settings),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: SpaceActions.toggleFavorite,
+                                child: ListTile(
+                                  leading: Icon(
+                                    isFavorite
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                  ),
+                                  title: Text(l10n.openSpaceOnStart),
+                                  trailing: isFavorite
+                                      ? const Icon(Icons.check)
+                                      : null,
                                 ),
                               ),
                               if (anyUnread)

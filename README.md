@@ -32,6 +32,9 @@ Please report problems with this fork here, not to FluffyChat.
 - **Muted section:** muted chats collapse into a **Muted** section at the bottom of
   the space. Tap the header to expand it. Searching shows them too.
 - **Mark all as read** and **Mute all chats / Unmute all chats** in the space menu.
+- **Opens where you left off:** the app starts on the space you had open last. Pick
+  **Open this space on start** in a space's menu to always start on that one instead
+  (choose it again to turn it off).
 
 ### Chat rows in a space
 
