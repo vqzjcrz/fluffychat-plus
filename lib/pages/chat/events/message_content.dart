@@ -10,6 +10,8 @@ import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/events/poll.dart';
 import 'package:fluffychat/pages/chat/events/video_player.dart';
 import 'package:fluffychat/pages/image_viewer/image_viewer.dart';
+import 'package:fluffychat/pages/reels/reel_bubble.dart';
+import 'package:fluffychat/utils/instagram_reel.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
@@ -119,6 +121,9 @@ class MessageContent extends StatelessWidget {
               linkColor: linkColor,
             );
           case MessageTypes.Video:
+            if (event.isInstagramReel) {
+              return ReelBubble(event, timeline: timeline);
+            }
             return EventVideoPlayer(
               event,
               textColor: textColor,

@@ -13,6 +13,7 @@ import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/adaptive_bottom_sheet.dart';
 import 'package:fluffychat/utils/date_time_extension.dart';
 import 'package:fluffychat/utils/file_description.dart';
+import 'package:fluffychat/utils/instagram_reel.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/string_color.dart';
 import 'package:fluffychat/widgets/avatar.dart';
@@ -155,13 +156,14 @@ class Message extends StatelessWidget {
     );
     const avatarSize = Avatar.defaultSize;
     final noBubble =
-        ({
-          MessageTypes.Video,
-          MessageTypes.Image,
-          MessageTypes.Sticker,
-        }.contains(event.messageType) &&
-        event.fileDescription == null &&
-        !event.redacted);
+        (({
+                  MessageTypes.Video,
+                  MessageTypes.Image,
+                  MessageTypes.Sticker,
+                }.contains(event.messageType) &&
+                event.fileDescription == null) ||
+            displayEvent.isInstagramReel) &&
+        !event.redacted;
 
     if (ownMessage) {
       color = displayEvent.status.isError

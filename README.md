@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 An unofficial fork of [FluffyChat](https://github.com/krille-chan/fluffychat), the open
 source [Matrix](https://matrix.org) client by Christian Kußowski. FluffyChat+ adds
 better space organization (sorting, pinning, reordering), snoozing, read-only chat
-handling, preset themes and a home screen chat widget.
+handling, preset themes, an Instagram-style reels viewer and a home screen chat widget.
 
 Everything else (messaging, encryption, calls, notifications, settings) is FluffyChat,
 unchanged. This fork is not affiliated with or endorsed by the FluffyChat project.
@@ -56,6 +56,23 @@ Please report problems with this fork here, not to FluffyChat.
   Catppuccin, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Everforest and One Dark.
   Each has a light and a dark variant except AMOLED Black, which is dark only and
   keeps your accent color. Picking an accent color switches back to Default.
+
+### Instagram reels
+
+- **Reel cards in chats:** reels from the Instagram bridge (and the reels hub) show as
+  tall 9:16 cards with who sent them, the caption and a play button, like a reel
+  shared in an Instagram DM.
+- **Full-screen Reels viewer:** tap a card, or the 🎬 button at the top of a chat that
+  has reels. One reel per screen, swipe up for the next (older) one; it loads more as
+  you go. Videos loop and start over when you come back to them.
+- **Instagram controls:** tap to pause, hold to pause while holding, double-tap for a
+  ❤️ with the heart animation. On the right: like, comment, share and more (open on
+  Instagram, go to the original chat, save). Bottom: who sent it, the chat it came
+  from, the caption (tap to expand) and a scrubbable progress bar. Mute toggle at the
+  top.
+- **Likes and comments go back to Instagram:** a like is a ❤️ reaction and a comment is
+  a reply, which the bridge (or the reels hub, from the Reels room) sends to the
+  original chat.
 
 ### Home screen widget
 
@@ -120,6 +137,7 @@ New files:
 - `lib/pages/chat/read_only_composer_note.dart`: the note that replaces the message box
 - `lib/config/theme_presets.dart`: the preset themes
 - `lib/utils/home_widget_sync.dart`: sends chats and messages to the home screen widgets
+- `lib/utils/instagram_reel.dart`, `lib/pages/reels/`: reel cards and the full-screen viewer
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
   `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget
   and its chat picker
@@ -131,7 +149,8 @@ Changed files:
 - `lib/pages/chat_list/navigation_rail.dart`, `navi_rail_item.dart`: drag-to-reorder space bar
 - `lib/pages/chat_list/chat_list.dart`, `chat_list_item.dart`: snooze in the chat menu,
   lock and snooze icons
-- `lib/pages/chat/chat.dart`, `chat_view.dart`: read-only note
+- `lib/pages/chat/chat.dart`, `chat_view.dart`: read-only note, Watch reels button
+- `lib/pages/chat/events/message.dart`, `message_content.dart`: reel cards
 - `lib/utils/push_helper.dart`, `lib/widgets/local_notifications_extension.dart`,
   `lib/widgets/matrix.dart`: drop notifications from snoozed chats, update widgets
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/MainActivity.kt`,
