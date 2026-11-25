@@ -122,7 +122,7 @@ object WidgetStore {
 
     /** Chats that have a widget. Drops stored messages of chats that no longer do. */
     fun configuredRoomIds(context: Context): List<String> {
-        val ids = widgetIds(context).mapNotNull { roomForWidget(context, it) }.distinct()
+        val ids = widgetIds(context).toList().mapNotNull { roomForWidget(context, it) }.distinct()
         val prefs = prefs(context)
         val stale = prefs.all.keys.filter {
             it.startsWith(PREFIX_ROOM) && it.removePrefix(PREFIX_ROOM) !in ids
