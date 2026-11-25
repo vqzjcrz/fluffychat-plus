@@ -79,7 +79,23 @@ abstract class HomeWidgetSync {
   static void _schedule(List<Client> clients, L10n l10n) {
     _clients = clients;
     _l10n = l10n;
+    _listenForRefreshRequests();
     _timer ??= Timer(const Duration(seconds: 2), _flush);
+  }
+
+  static bool _listening = false;
+
+  /// The widget's chat picker asks for a refresh after the user picks a
+  /// chat, so the new widget fills in right away if the app is running.
+  static void _listenForRefreshRequests() {
+    if (_listening) return;
+    _listening = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method != 'requestRefresh') return null;
+      final l10n = _l10n;
+      if (l10n != null) requestFullRefresh(_clients, l10n);
+      return null;
+    });
   }
 
   static Future<void> _flush() async {
@@ -144,7 +160,7 @@ abstract class HomeWidgetSync {
       )) {
         return;
       }
-      messages.add(_message(event, l10n));
+      messages.add(await _message(event, l10n, fetchSender: true));
       while (messages.length > _maxMessages) {
         messages.removeAt(0);
       }
@@ -220,19 +236,32 @@ abstract class HomeWidgetSync {
     return null;
   }
 
-  static Map<String, Object?> _message(
+  /// [fetchSender] loads the sender's display name when it isn't in memory
+  /// yet, so bridged users don't show up as their raw user ID.
+  static Future<Map<String, Object?>> _message(
     Event event,
     L10n l10n, {
     Timeline? timeline,
-  }) {
+    bool fetchSender = false,
+  }) async {
     final displayEvent = timeline == null
         ? event
         : event.getDisplayEvent(timeline);
+    final String sender;
+    if (event.senderId == event.room.client.userID) {
+      sender = l10n.you;
+    } else {
+      User? user;
+      if (fetchSender) {
+        try {
+          user = await event.fetchSenderUser();
+        } catch (_) {}
+      }
+      sender = (user ?? event.senderFromMemoryOrFallback).calcDisplayname();
+    }
     return {
       'id': event.eventId,
-      'sender': event.senderId == event.room.client.userID
-          ? l10n.you
-          : event.senderFromMemoryOrFallback.calcDisplayname(),
+      'sender': sender,
       'body': displayEvent.calcLocalizedBody(
         MatrixLocals(l10n),
         hideReply: true,
@@ -250,11 +279,14 @@ abstract class HomeWidgetSync {
     try {
       timeline = await room.getTimeline(limit: 40);
       // Newest first.
-      for (final event in timeline.events) {
+      // A copy, since syncing can add events while names are loading.
+      for (final event in List<Event>.of(timeline.events)) {
         if (!_messageTypes.contains(event.type)) continue;
         if (event.redacted) continue;
         if (event.relationshipType == RelationshipTypes.edit) continue;
-        messages.add(_message(event, l10n, timeline: timeline));
+        messages.add(
+          await _message(event, l10n, timeline: timeline, fetchSender: true),
+        );
         if (messages.length >= _maxMessages) break;
       }
     } catch (e, s) {
@@ -306,7 +338,7 @@ abstract class HomeWidgetSync {
             : '',
         'unread': room.notificationCount,
         'highlight': room.highlightCount,
-        if (lastEvent != null) 'last': _message(lastEvent, l10n),
+        if (lastEvent != null) 'last': await _message(lastEvent, l10n),
       });
     }
     await _channel.invokeMethod('setRooms', jsonEncode(entries));

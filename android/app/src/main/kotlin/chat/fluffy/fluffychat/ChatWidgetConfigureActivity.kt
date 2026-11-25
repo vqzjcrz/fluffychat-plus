@@ -68,6 +68,7 @@ class ChatWidgetConfigureActivity : Activity() {
     private fun select(room: WidgetRoom) {
         WidgetStore.setWidgetRoom(this, widgetId, room.id)
         ChatWidgetProvider.updateAll(this)
+        WidgetBridge.requestRefresh()
         setResult(
             RESULT_OK,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId),

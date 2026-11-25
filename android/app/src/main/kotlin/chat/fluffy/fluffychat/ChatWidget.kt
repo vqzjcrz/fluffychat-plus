@@ -139,10 +139,22 @@ object WidgetStore {
 /** Method channel the Dart side uses to feed the widgets. */
 object WidgetBridge {
     private const val CHANNEL = "im.fluffychat.plus/widgets"
+    private var channel: MethodChannel? = null
+
+    /** Asks the app, if it's running, to send fresh data for all widgets. */
+    fun requestRefresh() {
+        try {
+            channel?.invokeMethod("requestRefresh", null)
+        } catch (e: Exception) {
+            // The app isn't running; it updates the widgets when it starts.
+        }
+    }
 
     fun register(context: Context, engine: FlutterEngine) {
         val app = context.applicationContext
-        MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        val methodChannel = MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
+        channel = methodChannel
+        methodChannel.setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
                     "configuredRooms" -> result.success(WidgetStore.configuredRoomIds(app))
