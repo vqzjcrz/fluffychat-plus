@@ -25,6 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/free_up_space
+      # Private-repo runners have about 7 GB of RAM, which the Android build
+      # (Gradle, R8, Dart and Rust compiles) can run out of. Add swap.
+      - name: Add swap
+        continue-on-error: true
+        run: |
+          sudo fallocate -l 8G /swapfile-build
+          sudo chmod 600 /swapfile-build
+          sudo mkswap /swapfile-build
+          sudo swapon /swapfile-build
+          free -h
+          df -h /
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: .fvmrc
@@ -68,7 +79,7 @@ jobs:
       - name: Build APK
         run: |
           BASE=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
-          flutter build apk --release --build-number=$((BASE * 1000 + ${{ github.run_number }}))
+          flutter build apk --release --target-platform android-arm64 --build-number=$((BASE * 1000 + ${{ github.run_number }}))
           cp build/app/outputs/flutter-apk/app-release.apk fluffychat-plus.apk
       - name: Upload APK
         uses: actions/upload-artifact@v7

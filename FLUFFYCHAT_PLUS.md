@@ -26,7 +26,8 @@ Changed files: `lib/utils/custom_order_extension.dart` (new),
 ## Building with GitHub Actions
 
 This lives on the `fluffychat-plus` branch of `vqzjcrz/Hush` (`main` there is untouched).
-Every push to that branch builds the APK and attaches it to a release named
+Every push to that branch builds the APK (arm64 only, which covers Pixels and
+other modern phones, and keeps the build within the runner's memory) and attaches it to a release named
 `FluffyChat+ build <n>` (tag `fluffychat-plus-<n>`).
 
 ### Signing key (do once, so updates install over the old version)
