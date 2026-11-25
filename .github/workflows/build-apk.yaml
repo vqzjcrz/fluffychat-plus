@@ -1,0 +1,87 @@
+# SPDX-FileCopyrightText: 2019-Present Christian Kußowski
+# SPDX-FileCopyrightText: 2019-Present Contributors to FluffyChat
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Builds the FluffyChat+ APK on every push to the fluffychat-plus branch and
+# publishes it as a GitHub release (tag fluffychat-plus-<run number>).
+name: Build FluffyChat+ APK
+
+on:
+  push:
+    branches: [fluffychat-plus]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+jobs:
+  build_apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/free_up_space
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvmrc
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache Gradle
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+      # Builds are signed with your key from the repository secrets, so new
+      # builds install as updates. Without the secrets, a throwaway key is
+      # made for this build only (you'd have to uninstall to update).
+      - name: Set up signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FLUFFYCHAT_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.FLUFFYCHAT_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/fluffychat-plus.p12
+            echo "SIGNING_NOTE=Signed with your FluffyChat+ key." >> "$GITHUB_ENV"
+          else
+            echo "::warning::No FLUFFYCHAT_KEYSTORE_* secrets, signing with a one-off key."
+            KEYSTORE_PASSWORD="$(openssl rand -hex 24)"
+            keytool -genkeypair -keystore android/fluffychat-plus.p12 -storetype PKCS12 \
+              -alias plus -keyalg RSA -keysize 2048 -validity 3650 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+              -dname "CN=FluffyChat Plus temporary"
+            echo "SIGNING_NOTE=Signed with a one-off key: uninstall the previous FluffyChat+ before installing this build." >> "$GITHUB_ENV"
+          fi
+          cat > android/key.properties <<EOF
+          storeFile=../fluffychat-plus.p12
+          storePassword=${KEYSTORE_PASSWORD}
+          keyPassword=${KEYSTORE_PASSWORD}
+          keyAlias=plus
+          EOF
+      - run: flutter pub get
+      - name: Build APK
+        run: |
+          BASE=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
+          flutter build apk --release --build-number=$((BASE * 1000 + ${{ github.run_number }}))
+          cp build/app/outputs/flutter-apk/app-release.apk fluffychat-plus.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: fluffychat-plus-apk
+          path: fluffychat-plus.apk
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: fluffychat-plus-${{ github.run_number }}
+          name: FluffyChat+ build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Built from ${{ github.sha }}.
+            ${{ env.SIGNING_NOTE }}
+          files: fluffychat-plus.apk
