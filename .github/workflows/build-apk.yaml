@@ -78,9 +78,33 @@ jobs:
       - run: flutter pub get
       - name: Build APK
         run: |
+          set -o pipefail
           BASE=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
-          flutter build apk --release --target-platform android-arm64 --build-number=$((BASE * 1000 + ${{ github.run_number }}))
+          flutter build apk --release --target-platform android-arm64 --build-number=$((BASE * 1000 + ${{ github.run_number }})) 2>&1 | tee build.log
           cp build/app/outputs/flutter-apk/app-release.apk fluffychat-plus.apk
+      # On failure, the errors go to the ci-logs branch so they can be read
+      # without opening the Actions page.
+      - name: Publish build errors
+        if: failure()
+        run: |
+          {
+            echo "Run ${{ github.run_number }} for ${{ github.sha }}"
+            if [ -f build.log ]; then
+              echo "== Error lines =="
+              grep -nE "Error:|error:|^e: |FAILURE|What went wrong|Exception" build.log | head -200 || true
+              echo "== Last 250 lines =="
+              tail -250 build.log
+            else
+              echo "The build step didn't run; an earlier step failed."
+            fi
+          } > build-errors.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan ci-logs
+          git rm -rf --cached . > /dev/null
+          git add -f build-errors.txt
+          git commit -m "Build errors for run ${{ github.run_number }}"
+          git push -f origin ci-logs
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
