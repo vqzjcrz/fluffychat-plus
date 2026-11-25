@@ -15,11 +15,8 @@ import 'package:fluffychat/pages/chat/chat_event_list.dart';
 import 'package:fluffychat/pages/chat/pinned_events.dart';
 import 'package:fluffychat/pages/chat/read_only_composer_note.dart';
 import 'package:fluffychat/pages/chat/reply_display.dart';
-import 'package:fluffychat/pages/reels/reels_viewer.dart';
 import 'package:fluffychat/utils/account_config.dart';
-import 'package:fluffychat/utils/instagram_reel.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
-import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/widgets/chat_settings_popup_menu.dart';
 import 'package:fluffychat/widgets/matrix.dart';
@@ -256,26 +253,6 @@ class ChatView extends StatelessWidget {
                       IconButton(
                         icon: Icon(Icons.call_outlined),
                         onPressed: controller.startOrJoinVideoCall,
-                      ),
-                    if (PlatformInfos.supportsVideoPlayer &&
-                        (controller.timeline?.events.any(
-                              (event) => event.isInstagramReel,
-                            ) ??
-                            false))
-                      IconButton(
-                        icon: const Icon(Icons.movie_outlined),
-                        tooltip: L10n.of(context).watchReels,
-                        onPressed: () {
-                          final timeline = controller.timeline;
-                          if (timeline == null) return;
-                          final reels = InstagramReel.fromTimeline(timeline);
-                          if (reels.isEmpty) return;
-                          showReelsViewer(
-                            context,
-                            event: reels.first.event,
-                            timeline: timeline,
-                          );
-                        },
                       ),
                     ChatSettingsPopupMenu(controller.room, true),
                   ],

@@ -3007,42 +3007,5 @@
     "directChat": "Direct chat",
     "@directChat": {
         "description": "Label for a one-on-one chat in the home screen widget chat picker"
-    },
-    "reels": "Reels",
-    "@reels": {
-        "description": "Title of the full-screen reels viewer"
-    },
-    "openOnInstagram": "Open on Instagram",
-    "@openOnInstagram": {
-        "description": "Opens a reel in the Instagram app or website"
-    },
-    "goToOriginalChat": "Go to original chat",
-    "@goToOriginalChat": {
-        "description": "Opens the chat a reposted reel came from"
-    },
-    "couldNotPlayReel": "Couldn't play this reel",
-    "@couldNotPlayReel": {
-        "description": "Shown when a reel video fails to load"
-    },
-    "addComment": "Add a comment…",
-    "@addComment": {
-        "description": "Hint in the reel comment box"
-    },
-    "replySent": "Reply sent",
-    "@replySent": {
-        "description": "Shown after commenting on a reel"
-    },
-    "replyToReel": "Reply to {author}",
-    "@replyToReel": {
-        "description": "Title of the reel comment box",
-        "placeholders": {
-            "author": {
-                "type": "String"
-            }
-        }
-    },
-    "watchReels": "Watch reels",
-    "@watchReels": {
-        "description": "Button in a chat that opens its reels full screen"
     }
 }

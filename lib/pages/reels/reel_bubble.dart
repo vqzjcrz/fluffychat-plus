@@ -5,7 +5,7 @@
 
 import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/setting_keys.dart';
-import 'package:fluffychat/pages/reels/reels_viewer.dart';
+import 'package:fluffychat/pages/image_viewer/image_viewer.dart';
 import 'package:fluffychat/utils/instagram_reel.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/event_extension.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
@@ -16,7 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
 /// A reel in the chat, shown as a tall card like a reel shared in an
-/// Instagram DM. Tapping it opens the full-screen reels viewer.
+/// Instagram DM. Tapping it plays it in the normal media viewer.
 class ReelBubble extends StatelessWidget {
   final Event event;
   final Timeline? timeline;
@@ -44,8 +44,16 @@ class ReelBubble extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppConfig.borderRadius),
       clipBehavior: Clip.hardEdge,
       child: InkWell(
+        // Opens in the normal media viewer, like any other video.
         onTap: () => PlatformInfos.supportsVideoPlayer
-            ? showReelsViewer(context, event: event, timeline: timeline)
+            ? showDialog(
+                context: context,
+                builder: (_) => ImageViewer(
+                  event,
+                  timeline: timeline,
+                  outerContext: context,
+                ),
+              )
             : event.saveFile(context),
         child: SizedBox(
           width: width,

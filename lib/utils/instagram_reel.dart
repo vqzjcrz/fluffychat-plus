@@ -31,10 +31,10 @@ extension InstagramReelExtension on Event {
 
 /// What the reels UI shows for one reel.
 class InstagramReel {
-  /// The event as it arrived. Reactions and replies go to this one.
+  /// The event as it arrived.
   final Event event;
 
-  /// The event with its latest edit applied. The video comes from this one.
+  /// The event with its latest edit applied.
   final Event displayEvent;
 
   /// Who sent the reel.
@@ -117,45 +117,4 @@ class InstagramReel {
       originalLink: originalLink,
     );
   }
-
-  /// All reels in [timeline], newest first, like a feed.
-  static List<InstagramReel> fromTimeline(Timeline timeline) => timeline.events
-      .where(
-        (event) =>
-            event.relationshipType != RelationshipTypes.edit &&
-            event.type == EventTypes.Message,
-      )
-      .map((event) => fromEvent(event, timeline: timeline))
-      .whereType<InstagramReel>()
-      .toList();
-
-  /// Whether this reel is [event], which may be the original or its edit.
-  bool matches(Event other) =>
-      other.eventId == event.eventId || other.eventId == displayEvent.eventId;
-
-  /// The user's ❤️ on this reel, if they liked it.
-  Event? ownLike(Timeline? timeline) {
-    if (timeline == null) return null;
-    final userId = event.room.client.userID;
-    for (final reaction in event.aggregatedEvents(
-      timeline,
-      RelationshipTypes.reaction,
-    )) {
-      if (reaction.senderId != userId) continue;
-      final key = reaction.content
-          .tryGetMap<String, Object?>('m.relates_to')
-          ?.tryGet<String>('key');
-      if (key != null && isLikeKey(key)) return reaction;
-    }
-    return null;
-  }
-
-  /// How many reactions the reel has.
-  int reactionCount(Timeline? timeline) => timeline == null
-      ? 0
-      : event.aggregatedEvents(timeline, RelationshipTypes.reaction).length;
-
-  static const String likeKey = '❤️';
-
-  static bool isLikeKey(String key) => key == likeKey || key == '❤';
 }

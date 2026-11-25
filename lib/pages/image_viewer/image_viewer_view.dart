@@ -5,6 +5,7 @@
 
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/image_viewer/pointers_listener.dart';
+import 'package:fluffychat/pages/image_viewer/swipe_down_to_dismiss.dart';
 import 'package:fluffychat/pages/image_viewer/video_player.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:fluffychat/widgets/hover_builder.dart';
@@ -25,12 +26,14 @@ class ImageViewerView extends StatelessWidget {
       backgroundColor: Colors.black.withAlpha(200),
       foregroundColor: Colors.white,
     );
+    final visible = 1 - controller.dismissProgress;
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(),
       child: Scaffold(
-        backgroundColor: Colors.black.withAlpha(128),
+        backgroundColor: Colors.black.withAlpha((128 * visible).round()),
         extendBodyBehindAppBar: true,
         appBar: AppBar(
+          toolbarOpacity: visible,
           elevation: 0,
           leading: IconButton(
             style: iconButtonStyle,
@@ -91,13 +94,18 @@ class ImageViewerView extends StatelessWidget {
                       final event = controller.allEvents[i];
                       switch (event.messageType) {
                         case MessageTypes.Video:
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 52.0),
-                            child: Center(
-                              child: GestureDetector(
-                                // Ignore taps to not go back here:
-                                onTap: () {},
-                                child: EventVideoPlayer(event),
+                          // Swipe down anywhere on a video to close it.
+                          return SwipeDownToDismiss(
+                            onDismiss: () => Navigator.of(context).pop(),
+                            onProgress: controller.setDismissProgress,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 52.0),
+                              child: Center(
+                                child: GestureDetector(
+                                  // Ignore taps to not go back here:
+                                  onTap: () {},
+                                  child: EventVideoPlayer(event),
+                                ),
                               ),
                             ),
                           );

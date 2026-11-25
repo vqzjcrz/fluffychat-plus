@@ -58,6 +58,14 @@ class ImageViewerController extends State<ImageViewer> {
 
   late final PageController pageController;
 
+  /// How far a video has been dragged down to close the viewer, 0 to 1.
+  double dismissProgress = 0;
+
+  void setDismissProgress(double progress) {
+    if (progress == dismissProgress) return;
+    setState(() => dismissProgress = progress);
+  }
+
   late final List<Event> allEvents;
 
   void onKeyEvent(KeyEvent event) {
