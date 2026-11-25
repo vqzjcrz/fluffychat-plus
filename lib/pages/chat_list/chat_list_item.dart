@@ -9,7 +9,9 @@ import 'package:fluffychat/pages/chat_list/active_call_indicator.dart';
 import 'package:fluffychat/pages/chat_list/unread_bubble.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
+import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/utils/room_status_extension.dart';
+import 'package:fluffychat/utils/snooze_extension.dart';
 import 'package:fluffychat/widgets/hover_builder.dart';
 import 'package:fluffychat/widgets/typing_animation.dart';
 import 'package:material_ui/material_ui.dart';
@@ -191,7 +193,17 @@ class ChatListItem extends StatelessWidget {
                       softWrap: false,
                     ),
                   ),
-                  if (isMuted)
+                  if (room.isReadOnlyForMe)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4.0),
+                      child: Icon(Icons.lock_outline, size: 16),
+                    ),
+                  if (room.client.isSnoozed(room.id))
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4.0),
+                      child: Icon(Icons.snooze, size: 16),
+                    )
+                  else if (isMuted)
                     const Padding(
                       padding: EdgeInsets.only(left: 4.0),
                       child: Icon(Icons.notifications_off_outlined, size: 16),

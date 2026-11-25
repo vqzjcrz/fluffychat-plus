@@ -10,6 +10,7 @@ import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/notification_background_handler.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:fluffychat/utils/push_helper.dart';
+import 'package:fluffychat/utils/snooze_extension.dart';
 import 'package:fluffychat/widgets/fluffy_chat_app.dart';
 import 'package:fluffychat/widgets/incoming_call_dialog.dart';
 import 'package:fluffychat/widgets/matrix.dart';
@@ -48,6 +49,7 @@ extension LocalNotificationsExtension on MatrixState {
 
     final l10n = L10n.of(context);
     final roomId = event.room.id;
+    if (event.room.client.isSnoozed(roomId)) return;
     if (activeRoomId == roomId) {
       if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         return;

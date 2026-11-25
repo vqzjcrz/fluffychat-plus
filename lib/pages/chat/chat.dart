@@ -196,6 +196,12 @@ class ChatController extends State<ChatPageWithRoom>
 
   bool showEmojiPicker = false;
 
+  /// Shows the message input in a read-only Discord portal anyway, for
+  /// sending bridge commands.
+  bool showReadOnlyComposer = false;
+
+  void revealReadOnlyComposer() => setState(() => showReadOnlyComposer = true);
+
   String? get threadLastEventId {
     final threadId = activeThreadId;
     if (threadId == null) return null;

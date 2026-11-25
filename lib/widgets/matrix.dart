@@ -14,6 +14,7 @@ import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_file_extension.dar
 import 'package:fluffychat/utils/notification_background_handler.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:fluffychat/utils/push_helper.dart';
+import 'package:fluffychat/utils/snooze_extension.dart';
 import 'package:fluffychat/utils/uia_request_manager.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/fluffy_chat_app.dart';
@@ -178,6 +179,7 @@ class MatrixState extends State<Matrix> {
   final onKeyVerificationRequestSub = <String, StreamSubscription>{};
   final onNotification = <String, StreamSubscription>{};
   final onReceipts = <String, StreamSubscription>{};
+  final onSnoozeUpdate = <String, StreamSubscription>{};
   final onLogoutSub = <String, StreamSubscription<LoginState>>{};
   final onUiaRequest = <String, StreamSubscription<UiaRequest>>{};
 
@@ -294,6 +296,17 @@ class MatrixState extends State<Matrix> {
         );
       });
     }
+    // Keep a local copy of snoozed chats for the push handler.
+    c.accountDataLoading?.then((_) => c.mirrorSnoozeToStore());
+    onSnoozeUpdate[name] ??= c.onSync.stream
+        .where(
+          (syncUpdate) =>
+              syncUpdate.accountData?.any(
+                (event) => event.type == snoozeAccountDataType,
+              ) ??
+              false,
+        )
+        .listen((_) => c.mirrorSnoozeToStore());
     onReceipts[name] ??= c.onSync.stream.listen(
       (syncUpdate) => cancelNotificationsOnSync(
         syncUpdate,
@@ -317,6 +330,8 @@ class MatrixState extends State<Matrix> {
     onNotification.remove(name);
     onReceipts[name]?.cancel();
     onReceipts.remove(name);
+    onSnoozeUpdate[name]?.cancel();
+    onSnoozeUpdate.remove(name);
   }
 
   Future<void> initMatrix() async {
@@ -415,6 +430,10 @@ class MatrixState extends State<Matrix> {
     for (final sub in onReceipts.values) {
       sub.cancel();
     }
+    for (final sub in onSnoozeUpdate.values) {
+      sub.cancel();
+    }
+    onSnoozeUpdate.clear();
     onRoomKeyRequestSub.clear();
     onKeyVerificationRequestSub.clear();
     onLogoutSub.clear();

@@ -130,6 +130,9 @@ abstract class ClientManager {
         'im.ponies.room_emotes',
         // To display call state in chat list
         MatrixRtcCallMember.eventType,
+        // To tell bridged chats apart (FluffyChat+ read-only detection)
+        'm.bridge',
+        'uk.half-shot.bridge',
       },
       customImageResizer: PlatformInfos.supportsCustomImageResizer
           ? customImageResizer

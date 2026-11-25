@@ -19,12 +19,14 @@ import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:fluffychat/utils/show_scaffold_dialog.dart';
 import 'package:fluffychat/utils/show_update_snackbar.dart';
+import 'package:fluffychat/utils/snooze_extension.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
+import 'package:fluffychat/widgets/snooze_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
@@ -597,6 +599,21 @@ class ChatListController extends State<ChatList>
               ],
             ),
           ),
+          PopupMenuItem(
+            value: ChatContextAction.snooze,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                Icon(
+                  room.client.isSnoozed(room.id)
+                      ? Icons.snooze
+                      : Icons.snooze_outlined,
+                ),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).snoozeChat),
+              ],
+            ),
+          ),
           if (!room.isLowPriority)
             PopupMenuItem(
               value: ChatContextAction.favorite,
@@ -765,6 +782,11 @@ class ChatListController extends State<ChatList>
                 : PushRuleState.notify,
           ),
         );
+        return;
+      case ChatContextAction.snooze:
+        await showSnoozeDialog(context, room);
+        if (!mounted) return;
+        setState(() {});
         return;
       case ChatContextAction.block:
         final inviteEvent = await room.requestUser(room.client.userID!);
@@ -1086,6 +1108,7 @@ enum ChatContextAction {
   removeTag,
   markUnread,
   mute,
+  snooze,
   leave,
   addToSpace,
   block,

@@ -13,9 +13,11 @@ import 'package:fluffychat/pages/chat/chat_app_bar_list_tile.dart';
 import 'package:fluffychat/pages/chat/chat_app_bar_title.dart';
 import 'package:fluffychat/pages/chat/chat_event_list.dart';
 import 'package:fluffychat/pages/chat/pinned_events.dart';
+import 'package:fluffychat/pages/chat/read_only_composer_note.dart';
 import 'package:fluffychat/pages/chat/reply_display.dart';
 import 'package:fluffychat/utils/account_config.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
+import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/widgets/chat_settings_popup_menu.dart';
 import 'package:fluffychat/widgets/matrix.dart';
 import 'package:fluffychat/widgets/mxc_image.dart';
@@ -392,10 +394,22 @@ class ChatView extends StatelessWidget {
                                         ),
                                         onPressed: controller.goToNewRoomAction,
                                       )
-                                    : !controller.room.canSendDefaultMessages &&
-                                          controller.room.membership !=
-                                              Membership.invite
-                                    ? const SizedBox.shrink()
+                                    : controller.room.membership !=
+                                              Membership.invite &&
+                                          (!controller
+                                                  .room
+                                                  .canSendDefaultMessages ||
+                                              (controller
+                                                      .room
+                                                      .isDiscordBridged &&
+                                                  !controller
+                                                      .showReadOnlyComposer))
+                                    ? controller.room.membership ==
+                                              Membership.join
+                                          ? ReadOnlyComposerNote(
+                                              controller: controller,
+                                            )
+                                          : const SizedBox.shrink()
                                     : Material(
                                         clipBehavior: Clip.hardEdge,
                                         color:

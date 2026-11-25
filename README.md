@@ -8,9 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # FluffyChat+
 
 An unofficial fork of [FluffyChat](https://github.com/krille-chan/fluffychat), the open
-source [Matrix](https://matrix.org) client by Christian Kußowski. FluffyChat+ is
-FluffyChat with one addition: you can put your **spaces** and the **chats inside each
-space** in your own order instead of the default order.
+source [Matrix](https://matrix.org) client by Christian Kußowski. FluffyChat+ adds
+better space organization (sorting, pinning, reordering), snoozing, read-only chat
+handling and preset themes.
 
 Everything else (messaging, encryption, calls, notifications, settings) is FluffyChat,
 unchanged. This fork is not affiliated with or endorsed by the FluffyChat project.
@@ -18,17 +18,54 @@ Please report problems with this fork here, not to FluffyChat.
 
 ## What it adds
 
-- **Reorder spaces:** long-press (or click and hold) a space in the space bar and drag it.
-- **Reorder chats inside a space:** open the space, tap its avatar in the search bar,
-  choose **Reorder chats**, drag the ≡ handles, then tap **Done**.
-  **Reset chat order** in the same menu returns to the default order.
-- **Synced with your account:** the order is saved in your Matrix account data
-  (`im.fluffychat.plus.custom_order`), so it's the same on every device running
-  FluffyChat+ and survives reinstalls. Only you see it, and you don't need admin
-  rights in the space.
-- Spaces and chats you haven't placed yet appear after the ones you've arranged.
-- Separate app ID (`chat.fluffy.fluffychat.plus`), so it installs next to the official
-  FluffyChat instead of replacing it.
+### Spaces
+
+- **Sort modes per space:** tap the space's avatar in the search bar and pick
+  **Recent activity first** (the default), **Unread first** (mentions, then unread,
+  then the rest) or **Custom order**.
+- **Reorder chats:** choose **Reorder chats** in the same menu, drag the ≡ handles,
+  then tap **Done**. This switches the space to Custom order. **Reset chat order**
+  clears it.
+- **Reorder spaces:** long-press a space in the space bar and drag it.
+- **Pin chats in a space:** long-press a chat and choose **Pin**, or swipe it left.
+  Pinned chats stay in a section at the top of that space. Pins are per space.
+- **Muted section:** muted chats collapse into a **Muted** section at the bottom of
+  the space. Tap the header to expand it. Searching shows them too.
+- **Mark all as read** and **Mute all chats / Unmute all chats** in the space menu.
+
+### Chat rows in a space
+
+- **Unread highlight:** chats with unread messages get a brighter background. Chats
+  where someone mentioned or replied to you get a stronger accent and a bar on the left.
+- **Preview line:** the last message and how long ago it was sent (`5m ago`) under
+  each chat name. Shows who's typing too.
+- **Swipe actions:** swipe right to mark read or unread, swipe left to pin or unpin.
+- **Lock icon** on chats you can't post in.
+
+### Everywhere
+
+- **Snooze a chat:** long-press it and choose **Snooze**, then 1 hour, 8 hours or
+  until 8:00 tomorrow. Notifications from it stop until then and come back on their
+  own. Snoozing doesn't change your push rules on the server: the app drops the
+  notifications on the device, so the snooze ends even if you don't open the app.
+- **Read-only chats:** where you can't post (for example a Signal group where only
+  admins can send, or a read-only bridged Discord channel), the message box is
+  replaced by a note. In Discord chats, **Send a command** brings the box back so
+  you can still send bridge commands.
+- **Preset themes:** Settings → Style → **App theme**: AMOLED Black, Nord, Dracula,
+  Catppuccin, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Everforest and One Dark.
+  Each has a light and a dark variant except AMOLED Black, which is dark only and
+  keeps your accent color. Picking an accent color switches back to Default.
+
+### Synced with your account
+
+Sort modes, pins, custom order and snoozes are saved in your Matrix account data
+(`im.fluffychat.plus.space_prefs`, `im.fluffychat.plus.custom_order`,
+`im.fluffychat.plus.snooze`), so they're the same on every device running FluffyChat+
+and survive reinstalls. Only you see them, and you don't need admin rights in the space.
+
+The app has its own ID (`chat.fluffy.fluffychat.plus`), so it installs next to the
+official FluffyChat instead of replacing it.
 
 ## Download
 
@@ -61,10 +98,29 @@ flutter build apk --release --target-platform android-arm64
 
 ### Changes from FluffyChat
 
-- `lib/utils/custom_order_extension.dart` (new): stores and applies the custom order
-- `lib/pages/chat_list/navigation_rail.dart`: drag-to-reorder space bar
-- `lib/pages/chat_list/navi_rail_item.dart`: tooltip no longer steals the long press
-- `lib/pages/chat_list/space_view.dart`: reorder mode for chats in a space
+New files:
+
+- `lib/utils/custom_order_extension.dart`: custom order of spaces and chats
+- `lib/utils/space_prefs_extension.dart`: sort mode and pins per space
+- `lib/utils/snooze_extension.dart`: snoozed chats, plus a local copy for the push handler
+- `lib/utils/room_plus_extension.dart`: read-only and Discord detection, mark all read
+- `lib/widgets/snooze_dialog.dart`: the snooze picker
+- `lib/pages/chat/read_only_composer_note.dart`: the note that replaces the message box
+- `lib/config/theme_presets.dart`: the preset themes
+
+Changed files:
+
+- `lib/pages/chat_list/space_view.dart`: sort modes, sections, pins, swipe actions,
+  highlights, previews, space menu actions
+- `lib/pages/chat_list/navigation_rail.dart`, `navi_rail_item.dart`: drag-to-reorder space bar
+- `lib/pages/chat_list/chat_list.dart`, `chat_list_item.dart`: snooze in the chat menu,
+  lock and snooze icons
+- `lib/pages/chat/chat.dart`, `chat_view.dart`: read-only note
+- `lib/utils/push_helper.dart`, `lib/widgets/local_notifications_extension.dart`,
+  `lib/widgets/matrix.dart`: drop notifications from snoozed chats
+- `lib/utils/client_manager.dart`: loads bridge info at startup
+- `lib/config/themes.dart`, `setting_keys.dart`, `lib/widgets/theme_builder.dart`,
+  `lib/pages/settings_style/`: preset themes
 - `lib/l10n/intl_en.arb`: strings for the above
 - `android/app/build.gradle.kts`, `android/app/src/main/AndroidManifest.xml`: app ID and name
 - `.github/workflows/`: FluffyChat's workflows replaced by the APK build

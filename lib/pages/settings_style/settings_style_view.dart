@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:fluffychat/config/setting_keys.dart';
+import 'package:fluffychat/config/theme_presets.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/events/state_message.dart';
@@ -69,6 +70,62 @@ class SettingsStyleView extends StatelessWidget {
                 ],
               ),
             ),
+            Divider(color: theme.dividerColor),
+            ListTile(
+              title: Text(
+                L10n.of(context).appTheme,
+                style: TextStyle(
+                  color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Builder(
+              builder: (context) {
+                final brightness = Theme.of(context).brightness;
+                final seed =
+                    controller.currentColor ??
+                    Color(AppSettings.colorSchemeSeedInt.value);
+                final defaultScheme = ColorScheme.fromSeed(
+                  seedColor: seed,
+                  brightness: brightness,
+                  dynamicSchemeVariant: DynamicSchemeVariant.rainbow,
+                );
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Wrap(
+                    spacing: 4,
+                    runSpacing: 12,
+                    children: [
+                      _ThemePresetSwatch(
+                        name: L10n.of(context).defaultTheme,
+                        palette: ThemePalette(
+                          background: defaultScheme.surface,
+                          foreground: defaultScheme.onSurface,
+                          primary: defaultScheme.primary,
+                          secondary: defaultScheme.secondary,
+                          tertiary: defaultScheme.tertiary,
+                          error: defaultScheme.error,
+                        ),
+                        selected: ThemePreset.byId(
+                              controller.currentPreset,
+                            ) ==
+                            null,
+                        onTap: () => controller.setThemePreset(''),
+                      ),
+                      for (final preset in themePresets)
+                        _ThemePresetSwatch(
+                          name: preset.name,
+                          palette: preset.previewPalette(brightness, seed),
+                          selected: controller.currentPreset == preset.id,
+                          onTap: () => controller.setThemePreset(preset.id),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             Divider(color: theme.dividerColor),
             ListTile(
               title: Text(
@@ -343,6 +400,103 @@ class SettingsStyleView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ThemePresetSwatch extends StatelessWidget {
+  final String name;
+  final ThemePalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemePresetSwatch({
+    required this.name,
+    required this.palette,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Widget dot(Color color) => Container(
+      width: 12,
+      height: 12,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+    return SizedBox(
+      width: 84,
+      child: Column(
+        mainAxisSize: .min,
+        children: [
+          Material(
+            color: palette.background,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outlineVariant,
+                width: selected ? 3 : 1,
+              ),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: InkWell(
+              onTap: onTap,
+              child: SizedBox(
+                width: 72,
+                height: 56,
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Row(
+                        mainAxisSize: .min,
+                        children: [
+                          dot(palette.primary),
+                          dot(palette.secondary),
+                          dot(palette.tertiary),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: palette.foreground.withAlpha(90),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Icon(
+                          Icons.check_circle,
+                          size: 16,
+                          color: palette.primary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall,
+          ),
+        ],
       ),
     );
   }

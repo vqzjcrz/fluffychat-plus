@@ -2883,5 +2883,125 @@
     "@doneReordering": {
         "type": "String",
         "placeholders": {}
+    },
+    "pinned": "Pinned",
+    "@pinned": {
+        "description": "Header of the pinned chats section in a space"
+    },
+    "muted": "Muted",
+    "@muted": {
+        "description": "Header of the collapsed muted chats section in a space"
+    },
+    "markAllAsRead": "Mark all as read",
+    "@markAllAsRead": {
+        "description": "Space menu action that marks every chat in the space as read"
+    },
+    "muteAllChats": "Mute all chats",
+    "@muteAllChats": {
+        "description": "Space menu action that mutes every chat in the space"
+    },
+    "unmuteAllChats": "Unmute all chats",
+    "@unmuteAllChats": {
+        "description": "Space menu action that unmutes every chat in the space"
+    },
+    "sortRecentFirst": "Recent activity first",
+    "@sortRecentFirst": {
+        "description": "Sort mode for the chats in a space"
+    },
+    "sortUnreadFirst": "Unread first",
+    "@sortUnreadFirst": {
+        "description": "Sort mode for the chats in a space"
+    },
+    "sortCustomOrder": "Custom order",
+    "@sortCustomOrder": {
+        "description": "Sort mode for the chats in a space"
+    },
+    "readOnlyChat": "You can't post in this chat",
+    "@readOnlyChat": {
+        "description": "Tooltip of the lock icon on read-only chats"
+    },
+    "justNow": "now",
+    "@justNow": {
+        "description": "Time of a message sent less than a minute ago"
+    },
+    "minutesAgo": "{count}m ago",
+    "@minutesAgo": {
+        "description": "Time of a message sent minutes ago",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "{count}h ago",
+    "@hoursAgo": {
+        "description": "Time of a message sent hours ago",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "daysAgo": "{count}d ago",
+    "@daysAgo": {
+        "description": "Time of a message sent days ago",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "snoozeChat": "Snooze",
+    "@snoozeChat": {
+        "description": "Action to silence a chat for a while"
+    },
+    "snoozeDescription": "No notifications from this chat until the snooze ends. It turns back on by itself.",
+    "@snoozeDescription": {
+        "description": "Explanation in the snooze dialog"
+    },
+    "snoozedUntil": "Snoozed until {time}",
+    "@snoozedUntil": {
+        "description": "Shows when a snooze ends",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "snoozeOneHour": "For 1 hour",
+    "@snoozeOneHour": {
+        "description": "Snooze option"
+    },
+    "snoozeEightHours": "For 8 hours",
+    "@snoozeEightHours": {
+        "description": "Snooze option"
+    },
+    "snoozeUntilTomorrow": "Until tomorrow morning",
+    "@snoozeUntilTomorrow": {
+        "description": "Snooze option, ends at 8:00 the next day"
+    },
+    "endSnooze": "End snooze",
+    "@endSnooze": {
+        "description": "Turns notifications for a snoozed chat back on"
+    },
+    "cantPostHereNote": "You can't post in this chat. Only some members can send messages here.",
+    "@cantPostHereNote": {
+        "description": "Shown instead of the message input in chats the user cannot post in"
+    },
+    "readOnlyDiscordNote": "This Discord chat is read-only.",
+    "@readOnlyDiscordNote": {
+        "description": "Shown instead of the message input in read-only Discord chats"
+    },
+    "sendCommand": "Send a command",
+    "@sendCommand": {
+        "description": "Button that shows the message input in a read-only Discord chat, for bridge commands"
+    },
+    "appTheme": "App theme",
+    "@appTheme": {
+        "description": "Header of the preset theme picker in the style settings"
+    },
+    "defaultTheme": "Default",
+    "@defaultTheme": {
+        "description": "Name of the default theme in the theme picker"
     }
 }

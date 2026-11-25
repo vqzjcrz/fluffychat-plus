@@ -19,6 +19,7 @@ import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/notification_avatar_extension.dart';
 import 'package:fluffychat/utils/notification_background_handler.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
+import 'package:fluffychat/utils/snooze_extension.dart';
 import 'package:fluffychat/utils/start_push_foreground_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
@@ -170,6 +171,11 @@ Future<void> _tryPushHelper(
 
   if (!client.pushruleEvaluator.match(event).notify) {
     Logs().i('Push helper: filtered by client-side push rules.');
+    return;
+  }
+
+  if (await isRoomSnoozedForPush(client, event.room.id, store)) {
+    Logs().i('Push helper: chat is snoozed.');
     return;
   }
 

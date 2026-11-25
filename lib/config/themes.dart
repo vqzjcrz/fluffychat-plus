@@ -5,6 +5,7 @@
 
 import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/setting_keys.dart';
+import 'package:fluffychat/config/theme_presets.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -45,11 +46,16 @@ abstract class FluffyThemes {
     Brightness brightness, [
     Color? seed,
   ]) {
-    final colorScheme = ColorScheme.fromSeed(
-      brightness: brightness,
-      seedColor: seed ?? Color(AppSettings.colorSchemeSeedInt.value),
-      dynamicSchemeVariant: DynamicSchemeVariant.rainbow,
-    );
+    final seedColor = seed ?? Color(AppSettings.colorSchemeSeedInt.value);
+    final preset = ThemePreset.byId(AppSettings.themePreset.value);
+    if (preset != null) brightness = preset.effectiveBrightness(brightness);
+    final colorScheme =
+        preset?.colorScheme(brightness, seedColor) ??
+        ColorScheme.fromSeed(
+          brightness: brightness,
+          seedColor: seedColor,
+          dynamicSchemeVariant: DynamicSchemeVariant.rainbow,
+        );
     final isColumnMode = FluffyThemes.isColumnMode(context);
     final dividerColor = brightness == Brightness.dark
         ? colorScheme.surfaceContainerHighest

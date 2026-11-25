@@ -84,6 +84,9 @@ class ThemeController extends State<ThemeBuilder> {
     });
   }
 
+  /// Rebuilds the app theme, for settings that [FluffyThemes] reads directly.
+  void refresh() => setState(() {});
+
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback(_loadData);

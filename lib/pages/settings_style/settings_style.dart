@@ -5,6 +5,7 @@
 
 import 'package:file_picker/file_picker.dart';
 import 'package:fluffychat/config/setting_keys.dart';
+import 'package:fluffychat/config/theme_presets.dart';
 import 'package:fluffychat/utils/account_config.dart';
 import 'package:fluffychat/utils/file_selector.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
@@ -26,7 +27,23 @@ class SettingsStyleController extends State<SettingsStyle> {
     AppSettings.colorSchemeSeedInt.setItem(
       color?.toARGB32() ?? AppSettings.colorSchemeSeedInt.defaultValue,
     );
+    // Presets bring their own accent colors, except AMOLED which keeps the
+    // chosen one. Picking a color switches back to a theme that uses it.
+    final preset = currentPreset;
+    if (preset.isNotEmpty && preset != amoledPresetId) {
+      AppSettings.themePreset.setItem('');
+    }
     ThemeController.of(context).setPrimaryColor(color);
+    setState(() {});
+  }
+
+  String get currentPreset => AppSettings.themePreset.value;
+
+  Future<void> setThemePreset(String id) async {
+    await AppSettings.themePreset.setItem(id);
+    if (!mounted) return;
+    ThemeController.of(context).refresh();
+    setState(() {});
   }
 
   Future<void> setWallpaper() async {
