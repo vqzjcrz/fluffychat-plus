@@ -19,10 +19,14 @@ class ImageViewer extends StatefulWidget {
   final Timeline? timeline;
   final BuildContext outerContext;
 
+  /// Media to swipe through, oldest first, instead of the timeline's.
+  final List<Event>? events;
+
   const ImageViewer(
     this.event, {
     required this.outerContext,
     this.timeline,
+    this.events,
     super.key,
   });
 
@@ -37,6 +41,7 @@ class ImageViewerController extends State<ImageViewer> {
   void initState() {
     super.initState();
     allEvents =
+        widget.events ??
         widget.timeline?.events
             .where(
               (event) => {

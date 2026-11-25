@@ -13,6 +13,7 @@ import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/chat_list_view.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/error_reporter.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
@@ -26,6 +27,7 @@ import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart'
 import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
+import 'package:fluffychat/widgets/rename_for_me_dialog.dart';
 import 'package:fluffychat/widgets/snooze_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
@@ -580,11 +582,11 @@ class ChatListController extends State<ChatList>
                 Avatar(
                   mxContent: space.avatar,
                   size: Avatar.defaultSize / 2,
-                  name: space.getLocalizedDisplayname(),
+                  name: space.getNicknameOrDisplayname(),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  L10n.of(context).goToSpace(space.getLocalizedDisplayname()),
+                  L10n.of(context).goToSpace(space.getNicknameOrDisplayname()),
                 ),
               ],
             ),
@@ -625,6 +627,17 @@ class ChatListController extends State<ChatList>
                       ? L10n.of(context).markAsRead
                       : L10n.of(context).markAsUnread,
                 ),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: ChatContextAction.rename,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                const Icon(Icons.drive_file_rename_outline),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).renameForMe),
               ],
             ),
           ),
@@ -812,6 +825,11 @@ class ChatListController extends State<ChatList>
           ),
         );
         return;
+      case ChatContextAction.rename:
+        await showRenameForMeDialog(context, room);
+        if (!mounted) return;
+        setState(() {});
+        return;
       case ChatContextAction.snooze:
         await showSnoozeDialog(context, room);
         if (!mounted) return;
@@ -847,7 +865,7 @@ class ChatListController extends State<ChatList>
               .map(
                 (space) => AdaptiveModalAction(
                   value: space,
-                  label: space.getLocalizedDisplayname(
+                  label: space.getNicknameOrDisplayname(
                     MatrixLocals(L10n.of(context)),
                   ),
                 ),
@@ -1138,6 +1156,7 @@ enum ChatContextAction {
   markUnread,
   mute,
   snooze,
+  rename,
   leave,
   addToSpace,
   block,

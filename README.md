@@ -32,6 +32,11 @@ Please report problems with this fork here, not to FluffyChat.
 - **Muted section:** muted chats collapse into a **Muted** section at the bottom of
   the space. Tap the header to expand it. Searching shows them too.
 - **Mark all as read** and **Mute all chats / Unmute all chats** in the space menu.
+- **Space colors:** pick **Space color** in a space's menu. The space and the chats in
+  it take that accent color, on top of whichever app theme you use.
+- **Media gallery:** **Media** in a space's menu shows every photo, video and reel
+  shared in its chats, newest first. Tap to view and swipe through them; long-press
+  to jump to the message.
 - **Opens where you left off:** the app starts on the space you had open last. Pick
   **Open this space on start** in a space's menu to always start on that one instead
   (choose it again to turn it off).
@@ -46,6 +51,21 @@ Please report problems with this fork here, not to FluffyChat.
 - **Lock icon** on chats you can't post in.
 
 ### Everywhere
+
+- **Swipe right for the spaces panel:** in a chat, swipe from left to right anywhere
+  to slide open a Discord-style panel with your spaces and their chats, and jump
+  straight to another chat. (Off if you set swipe-to-reply to left-to-right.)
+- **Rename chats for yourself:** long-press a chat and choose **Rename for me** to give
+  it a name only you see, like for cryptic Discord channels. Leave it empty to go back.
+  Synced to your account.
+- **Pin for me:** select a message and choose **Pin for me** in the ⋮ menu to pin it
+  just for you, even in read-only chats like Discord announcement channels. Your pins
+  show in a bar under the chat title.
+- **Send later:** hold the send button to schedule a message for 1 hour, 3 hours,
+  tonight, tomorrow morning or any date and time. Your homeserver sends it, so your
+  phone can be off. Scheduled messages show in a bar in the chat, where you can send
+  them now or cancel them. Needs delayed events on Synapse: add
+  `max_event_delay_duration: 30d` to homeserver.yaml.
 
 - **Snooze a chat:** long-press it and choose **Snooze**, then 1 hour, 8 hours or
   until 8:00 tomorrow. Notifications from it stop until then and come back on their
@@ -82,9 +102,11 @@ Please report problems with this fork here, not to FluffyChat.
 
 ### Synced with your account
 
-Sort modes, pins, custom order and snoozes are saved in your Matrix account data
+Sort modes, pins, custom order, space colors, personal chat names, personal pins and
+snoozes are saved in your Matrix account data
 (`im.fluffychat.plus.space_prefs`, `im.fluffychat.plus.custom_order`,
-`im.fluffychat.plus.snooze`), so they're the same on every device running FluffyChat+
+`im.fluffychat.plus.snooze`, `im.fluffychat.plus.nicknames`,
+`im.fluffychat.plus.personal_pins`), so they're the same on every device running FluffyChat+
 and survive reinstalls. Only you see them, and you don't need admin rights in the space.
 
 The app has its own ID (`chat.fluffy.fluffychat.plus`), so it installs next to the
@@ -132,6 +154,12 @@ New files:
 - `lib/config/theme_presets.dart`: the preset themes
 - `lib/utils/home_widget_sync.dart`: sends chats and messages to the home screen widgets
 - `lib/utils/instagram_reel.dart`, `lib/pages/reels/reel_bubble.dart`: reel cards
+- `lib/utils/chat_nickname_extension.dart`, `lib/widgets/rename_for_me_dialog.dart`: personal chat names
+- `lib/widgets/space_accent_theme.dart`: space colors
+- `lib/pages/chat_list/space_media_gallery.dart`: space media gallery
+- `lib/utils/personal_pins_extension.dart`, `lib/pages/chat/personal_pinned_events.dart`: personal pins
+- `lib/utils/scheduled_messages.dart`, `lib/widgets/send_later_dialog.dart`: send later
+- `lib/pages/chat/spaces_panel.dart`: swipe-open spaces panel
 - `lib/pages/image_viewer/`: swipe down to close videos
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
   `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget

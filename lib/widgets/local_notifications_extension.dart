@@ -5,6 +5,7 @@
 
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/client_download_content_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/notification_background_handler.dart';
@@ -56,7 +57,7 @@ extension LocalNotificationsExtension on MatrixState {
       }
     }
 
-    final title = event.room.getLocalizedDisplayname(
+    final title = event.room.getNicknameOrDisplayname(
       MatrixLocals(L10n.of(context)),
     );
     var body = event.calcLocalizedBody(

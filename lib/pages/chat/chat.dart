@@ -28,6 +28,7 @@ import 'package:fluffychat/utils/matrix_sdk_extensions/filtered_timeline_extensi
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/ogg_opus_remuxer.dart';
 import 'package:fluffychat/utils/other_party_can_receive.dart';
+import 'package:fluffychat/utils/personal_pins_extension.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:fluffychat/utils/show_scaffold_dialog.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
@@ -35,6 +36,7 @@ import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart'
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/matrix.dart';
 import 'package:fluffychat/widgets/mxc_image.dart';
+import 'package:fluffychat/widgets/send_later_dialog.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -195,6 +197,46 @@ class ChatController extends State<ChatPageWithRoom>
   String pendingText = '';
 
   bool showEmojiPicker = false;
+
+  bool get selectedEventIsPersonallyPinned =>
+      selectedEvents.length == 1 &&
+      room.client.isPersonallyPinned(room.id, selectedEvents.single.eventId);
+
+  /// Pins or unpins the selected message for this user only.
+  void togglePersonalPinOfSelected() {
+    if (selectedEvents.length != 1) return;
+    final eventId = selectedEvents.single.eventId;
+    final pinned = room.client.isPersonallyPinned(room.id, eventId);
+    clearSelectedEvents();
+    setPersonalPin(eventId, !pinned);
+  }
+
+  Future<void> setPersonalPin(String eventId, bool pinned) async {
+    await showFutureLoadingDialog(
+      context: context,
+      future: () => room.client.setPersonallyPinned(room.id, eventId, pinned),
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// Long-press on send: let the server send the typed message later.
+  Future<void> sendLaterAction() async {
+    final text = sendController.text.trim();
+    if (text.isEmpty) return;
+    final scheduled = await showSendLaterDialog(context, room, text);
+    if (!scheduled || !mounted) return;
+    Matrix.of(context).store.remove('draft_$roomId');
+    setState(() {
+      sendController.clear();
+      _inputTextIsEmpty = true;
+      replyEvent = null;
+    });
+  }
+
+  Future<void> showScheduledMessages() async {
+    await showScheduledMessagesSheet(context, room);
+    if (mounted) setState(() {});
+  }
 
   /// Shows the message input in a read-only Discord portal anyway, for
   /// sending bridge commands.

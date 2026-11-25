@@ -6,18 +6,22 @@
 import 'dart:ui' as ui;
 
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/chat.dart';
 import 'package:fluffychat/pages/chat/chat_app_bar_list_tile.dart';
 import 'package:fluffychat/pages/chat/chat_app_bar_title.dart';
 import 'package:fluffychat/pages/chat/chat_event_list.dart';
+import 'package:fluffychat/pages/chat/personal_pinned_events.dart';
 import 'package:fluffychat/pages/chat/pinned_events.dart';
 import 'package:fluffychat/pages/chat/read_only_composer_note.dart';
 import 'package:fluffychat/pages/chat/reply_display.dart';
+import 'package:fluffychat/pages/chat/spaces_panel.dart';
 import 'package:fluffychat/utils/account_config.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
 import 'package:fluffychat/utils/room_plus_extension.dart';
+import 'package:fluffychat/utils/scheduled_messages.dart';
 import 'package:fluffychat/widgets/chat_settings_popup_menu.dart';
 import 'package:fluffychat/widgets/matrix.dart';
 import 'package:fluffychat/widgets/mxc_image.dart';
@@ -78,6 +82,15 @@ class ChatView extends StatelessWidget {
               appbarBottomHeight += ChatAppBarListTile.fixedHeight;
             }
             if (scrollUpBannerEventId != null && activeThreadId == null) {
+              appbarBottomHeight += ChatAppBarListTile.fixedHeight;
+            }
+            if (PersonalPinnedEvents.isVisible(controller)) {
+              appbarBottomHeight += ChatAppBarListTile.fixedHeight;
+            }
+            final scheduledCount = controller.room.client
+                .scheduledMessages(controller.room.id)
+                .length;
+            if (scheduledCount > 0 && activeThreadId == null) {
               appbarBottomHeight += ChatAppBarListTile.fixedHeight;
             }
             return Scaffold(
@@ -163,6 +176,26 @@ class ChatView extends StatelessWidget {
                           }
                         },
                         itemBuilder: (context) => [
+                          PopupMenuItem(
+                            onTap: controller.togglePersonalPinOfSelected,
+                            value: null,
+                            child: Row(
+                              mainAxisSize: .min,
+                              children: [
+                                Icon(
+                                  controller.selectedEventIsPersonallyPinned
+                                      ? Icons.push_pin
+                                      : Icons.push_pin_outlined,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  controller.selectedEventIsPersonallyPinned
+                                      ? L10n.of(context).unpinForMe
+                                      : L10n.of(context).pinForMe,
+                                ),
+                              ],
+                            ),
+                          ),
                           if (controller.canPinSelectedEvents)
                             PopupMenuItem(
                               onTap: controller.pinEvent,
@@ -263,6 +296,19 @@ class ChatView extends StatelessWidget {
                     mainAxisSize: .min,
                     children: [
                       PinnedEvents(controller),
+                      PersonalPinnedEvents(controller),
+                      if (scheduledCount > 0 && activeThreadId == null)
+                        ChatAppBarListTile(
+                          leading: Icon(
+                            Icons.schedule_send_outlined,
+                            size: 18,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          title: L10n.of(
+                            context,
+                          ).scheduledMessagesCount(scheduledCount),
+                          onTap: controller.showScheduledMessages,
+                        ),
                       if (activeThreadId != null)
                         SizedBox(
                           height: ChatAppBarListTile.fixedHeight,
@@ -324,7 +370,22 @@ class ChatView extends StatelessWidget {
                       ),
                     )
                   : null,
-              body: NotificationListener<SizeChangedLayoutNotification>(
+              // FluffyChat+: swipe right anywhere to open the spaces panel.
+              drawer: FluffyThemes.isColumnMode(context)
+                  ? null
+                  : SpacesPanel(currentRoomId: controller.room.id),
+              drawerEnableOpenDragGesture: false,
+              body: Builder(
+                builder: (bodyContext) => SwipeRightToOpen(
+                  enabled:
+                      !FluffyThemes.isColumnMode(context) &&
+                      !controller.selectMode &&
+                      AppSettings.swipeRightToLeftToReply.value,
+                  onOpen: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    Scaffold.of(bodyContext).openDrawer();
+                  },
+                  child: NotificationListener<SizeChangedLayoutNotification>(
                 onNotification: (SizeChangedLayoutNotification notification) {
                   WidgetsBinding.instance.addPostFrameCallback(
                     (_) => controller.updateInputBarHeight(),
@@ -540,6 +601,8 @@ class ChatView extends StatelessWidget {
                       ],
                     ),
                   ),
+                ),
+              ),
                 ),
               ),
             );

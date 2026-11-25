@@ -3011,5 +3011,117 @@
     "openSpaceOnStart": "Open this space on start",
     "@openSpaceOnStart": {
         "description": "Space menu toggle that makes the app open on this space"
+    },
+    "renameForMe": "Rename for me",
+    "@renameForMe": {
+        "description": "Chat menu action that gives a chat a name only the user sees"
+    },
+    "renameForMeDescription": "Only you see this name. Leave it empty to show \"{name}\" again.",
+    "@renameForMeDescription": {
+        "description": "Explanation in the rename dialog",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "spaceColor": "Space color",
+    "@spaceColor": {
+        "description": "Space menu action and dialog title for picking the space accent color"
+    },
+    "noSpaceColor": "No color",
+    "@noSpaceColor": {
+        "description": "Removes the accent color of a space"
+    },
+    "spaceMedia": "Media",
+    "@spaceMedia": {
+        "description": "Space menu action that opens the gallery of all media in the space"
+    },
+    "noSpaceMedia": "No photos or videos in this space yet",
+    "@noSpaceMedia": {
+        "description": "Shown when the space media gallery is empty"
+    },
+    "pinForMe": "Pin for me",
+    "@pinForMe": {
+        "description": "Message menu action that pins a message only for the user"
+    },
+    "unpinForMe": "Unpin for me",
+    "@unpinForMe": {
+        "description": "Removes a personal pin"
+    },
+    "pinnedForMe": "Pinned for me",
+    "@pinnedForMe": {
+        "description": "Title of the list of personal pins"
+    },
+    "sendLater": "Send later",
+    "@sendLater": {
+        "description": "Title of the dialog for scheduling a message"
+    },
+    "inOneHour": "In 1 hour",
+    "@inOneHour": {
+        "description": "Send later option"
+    },
+    "inThreeHours": "In 3 hours",
+    "@inThreeHours": {
+        "description": "Send later option"
+    },
+    "tonight": "Tonight",
+    "@tonight": {
+        "description": "Send later option, at 8 PM today"
+    },
+    "tomorrow": "Tomorrow",
+    "@tomorrow": {
+        "description": "Day label for a time tomorrow"
+    },
+    "pickDateAndTime": "Pick date and time…",
+    "@pickDateAndTime": {
+        "description": "Send later option that opens date and time pickers"
+    },
+    "pickFutureTime": "Pick a time in the future.",
+    "@pickFutureTime": {
+        "description": "Shown when a past time was picked for a scheduled message"
+    },
+    "scheduledMessagesUnsupported": "Your server doesn't have scheduled messages turned on. Add max_event_delay_duration: 30d to homeserver.yaml and restart Synapse.",
+    "@scheduledMessagesUnsupported": {
+        "description": "Shown when the homeserver does not support delayed events"
+    },
+    "scheduledMessageTooFar": "Your server only lets you schedule up to {hours} hours ahead.",
+    "@scheduledMessageTooFar": {
+        "description": "Shown when the chosen time is past the server limit",
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "scheduledFor": "Scheduled for {time}",
+    "@scheduledFor": {
+        "description": "Confirmation after scheduling a message",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "scheduledMessages": "Scheduled messages",
+    "@scheduledMessages": {
+        "description": "Title of the list of scheduled messages in a chat"
+    },
+    "scheduledMessagesCount": "{count, plural, =1{1 scheduled message} other{{count} scheduled messages}}",
+    "@scheduledMessagesCount": {
+        "description": "Bar in a chat with scheduled messages",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "noScheduledMessages": "No scheduled messages",
+    "@noScheduledMessages": {
+        "description": "Shown when no messages are scheduled"
+    },
+    "sendNow": "Send now",
+    "@sendNow": {
+        "description": "Sends a scheduled message right away"
     }
 }

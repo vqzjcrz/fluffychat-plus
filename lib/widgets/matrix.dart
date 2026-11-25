@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/client_manager.dart';
 import 'package:fluffychat/utils/home_widget_sync.dart';
 import 'package:fluffychat/utils/init_with_restore.dart';
@@ -300,15 +301,21 @@ class MatrixState extends State<Matrix> {
     }
     // Keep a local copy of snoozed chats for the push handler.
     c.accountDataLoading?.then((_) => c.mirrorSnoozeToStore());
+    c.accountDataLoading?.then((_) => c.mirrorChatNicknamesToStore());
     onSnoozeUpdate[name] ??= c.onSync.stream
         .where(
           (syncUpdate) =>
               syncUpdate.accountData?.any(
-                (event) => event.type == snoozeAccountDataType,
+                (event) =>
+                    event.type == snoozeAccountDataType ||
+                    event.type == chatNicknamesAccountDataType,
               ) ??
               false,
         )
-        .listen((_) => c.mirrorSnoozeToStore());
+        .listen((_) {
+          c.mirrorSnoozeToStore();
+          c.mirrorChatNicknamesToStore();
+        });
     if (PlatformInfos.isAndroid) {
       onHomeWidgetSync[name] ??= c.onSync.stream.listen(
         (syncUpdate) => HomeWidgetSync.onSync(

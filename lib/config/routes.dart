@@ -39,6 +39,7 @@ import 'package:fluffychat/widgets/layouts/two_column_layout.dart';
 import 'package:fluffychat/widgets/log_view.dart';
 import 'package:fluffychat/widgets/matrix.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
+import 'package:fluffychat/widgets/space_accent_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
@@ -390,12 +391,16 @@ abstract class AppRoutes {
                 return defaultPageBuilder(
                   context,
                   state,
-                  ChatPage(
-                    key: ValueKey(state.uri),
+                  // FluffyChat+: chats take the color of their space.
+                  SpaceAccentTheme(
                     roomId: state.pathParameters['roomid']!,
-                    shareItems: shareItems,
-                    eventId: state.uri.queryParameters['event'],
-                    action: state.uri.queryParameters['action'],
+                    child: ChatPage(
+                      key: ValueKey(state.uri),
+                      roomId: state.pathParameters['roomid']!,
+                      shareItems: shareItems,
+                      eventId: state.uri.queryParameters['event'],
+                      action: state.uri.queryParameters['action'],
+                    ),
                   ),
                 );
               },

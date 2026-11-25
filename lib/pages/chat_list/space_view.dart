@@ -11,7 +11,9 @@ import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/active_call_indicator.dart';
+import 'package:fluffychat/pages/chat_list/space_media_gallery.dart';
 import 'package:fluffychat/pages/chat_list/unread_bubble.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/custom_order_extension.dart';
 import 'package:fluffychat/utils/date_time_extension.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
@@ -28,7 +30,9 @@ import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/hover_builder.dart';
 import 'package:fluffychat/widgets/matrix.dart';
+import 'package:fluffychat/widgets/rename_for_me_dialog.dart';
 import 'package:fluffychat/widgets/snooze_dialog.dart';
+import 'package:fluffychat/widgets/space_accent_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
@@ -36,6 +40,7 @@ import 'package:matrix/matrix.dart';
 enum SpaceChildAction {
   pin,
   unpin,
+  rename,
   snooze,
   mute,
   unmute,
@@ -57,6 +62,8 @@ enum SpaceActions {
   muteAll,
   unmuteAll,
   toggleFavorite,
+  color,
+  media,
   leave,
 }
 
@@ -236,6 +243,7 @@ class _SpaceViewState extends State<SpaceView> {
     SpaceRoomsChunk$2 item,
     Room? joinedRoom,
   ) =>
+      Matrix.of(context).client.chatNicknames[item.roomId] ??
       item.name ??
       item.canonicalAlias ??
       joinedRoom?.getLocalizedDisplayname() ??
@@ -367,6 +375,27 @@ class _SpaceViewState extends State<SpaceView> {
         if (!mounted) return;
         setState(() {});
         break;
+      case SpaceActions.color:
+        final picked = await showSpaceColorPicker(
+          context,
+          client.spaceColor(widget.spaceId),
+        );
+        if (picked == null || !mounted) return;
+        await showFutureLoadingDialog(
+          context: context,
+          future: () =>
+              client.setSpaceColor(widget.spaceId, picked < 0 ? null : picked),
+        );
+        if (!mounted) return;
+        setState(() {});
+        break;
+      case SpaceActions.media:
+        await Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (_) => SpaceMediaGallery(spaceId: widget.spaceId),
+          ),
+        );
+        break;
       case SpaceActions.toggleFavorite:
         final isFavorite = AppSettings.favoriteSpace.value == widget.spaceId;
         await AppSettings.favoriteSpace.setItem(
@@ -496,6 +525,17 @@ class _SpaceViewState extends State<SpaceView> {
             ),
           ),
           PopupMenuItem(
+            value: SpaceChildAction.rename,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                const Icon(Icons.drive_file_rename_outline),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).renameForMe),
+              ],
+            ),
+          ),
+          PopupMenuItem(
             value: SpaceChildAction.snooze,
             child: Row(
               mainAxisSize: .min,
@@ -600,6 +640,10 @@ class _SpaceViewState extends State<SpaceView> {
         await _setPinned(roomId, true);
       case SpaceChildAction.unpin:
         await _setPinned(roomId, false);
+      case SpaceChildAction.rename:
+        await showRenameForMeDialog(context, room!);
+        if (!mounted) return;
+        setState(() {});
       case SpaceChildAction.snooze:
         await showSnoozeDialog(context, room!);
         if (!mounted) return;
@@ -1024,7 +1068,12 @@ class _SpaceViewState extends State<SpaceView> {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => SpaceAccentTheme(
+    spaceId: widget.spaceId,
+    child: Builder(builder: _buildView),
+  );
+
+  Widget _buildView(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = L10n.of(context);
 
@@ -1184,6 +1233,30 @@ class _SpaceViewState extends State<SpaceView> {
                                 child: ListTile(
                                   leading: const Icon(Icons.settings_outlined),
                                   title: Text(l10n.settings),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: SpaceActions.media,
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.photo_library_outlined,
+                                  ),
+                                  title: Text(l10n.spaceMedia),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: SpaceActions.color,
+                                child: ListTile(
+                                  leading: Icon(
+                                    Icons.palette_outlined,
+                                    color: client.spaceColor(widget.spaceId) ==
+                                            null
+                                        ? null
+                                        : Color(
+                                            client.spaceColor(widget.spaceId)!,
+                                          ),
+                                  ),
+                                  title: Text(l10n.spaceColor),
                                 ),
                               ),
                               PopupMenuItem(

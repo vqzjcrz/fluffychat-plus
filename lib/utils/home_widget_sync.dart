@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:flutter/services.dart';
@@ -147,7 +148,7 @@ abstract class HomeWidgetSync {
 
       final data = await _storedRoomData(room.id) ??
           <String, Object?>{
-            'name': room.getLocalizedDisplayname(MatrixLocals(l10n)),
+            'name': room.getNicknameOrDisplayname(MatrixLocals(l10n)),
             'unread': 0,
             'highlight': 0,
             'messages': <Object?>[],
@@ -295,7 +296,7 @@ abstract class HomeWidgetSync {
       timeline?.cancelSubscriptions();
     }
     return {
-      'name': room.getLocalizedDisplayname(MatrixLocals(l10n)),
+      'name': room.getNicknameOrDisplayname(MatrixLocals(l10n)),
       'unread': room.notificationCount,
       'highlight': room.highlightCount,
       'messages': messages.reversed.toList(),
@@ -313,7 +314,7 @@ abstract class HomeWidgetSync {
           rooms.add(room);
           continue;
         }
-        final name = room.getLocalizedDisplayname(locals);
+        final name = room.getNicknameOrDisplayname(locals);
         for (final child in room.spaceChildren) {
           final childId = child.roomId;
           if (childId == null) continue;
@@ -330,7 +331,7 @@ abstract class HomeWidgetSync {
       final lastEvent = room.lastEvent;
       entries.add({
         'id': room.id,
-        'name': room.getLocalizedDisplayname(locals),
+        'name': room.getNicknameOrDisplayname(locals),
         'sub': spaces != null
             ? spaces.join(', ')
             : room.isDirectChat

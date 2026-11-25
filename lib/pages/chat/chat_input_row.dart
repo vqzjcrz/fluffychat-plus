@@ -371,15 +371,22 @@ class ChatInputRow extends StatelessWidget {
                               ),
                             ),
                           )
-                        : IconButton(
-                            key: Key('send_button'),
-                            tooltip: L10n.of(context).send,
-                            onPressed: controller.send,
-                            style: IconButton.styleFrom(
-                              backgroundColor: theme.bubbleColor,
-                              foregroundColor: theme.onBubbleColor,
+                        // FluffyChat+: hold to schedule the message.
+                        : Semantics(
+                            label: L10n.of(context).send,
+                            button: true,
+                            child: GestureDetector(
+                              onLongPress: controller.sendLaterAction,
+                              child: IconButton(
+                                key: Key('send_button'),
+                                onPressed: controller.send,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: theme.bubbleColor,
+                                  foregroundColor: theme.onBubbleColor,
+                                ),
+                                icon: const Icon(Icons.send_outlined),
+                              ),
                             ),
-                            icon: const Icon(Icons.send_outlined),
                           ),
                   ),
                 ],

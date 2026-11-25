@@ -8,6 +8,7 @@ import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/navi_rail_item.dart';
 import 'package:fluffychat/pages/chat_list/start_chat_fab.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/custom_order_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/stream_extension.dart';
@@ -129,7 +130,7 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
                       itemCount: allSpaces.length,
                       itemBuilder: (context, i) {
                         final space = allSpaces[i];
-                        final displayname = space.getLocalizedDisplayname(
+                        final displayname = space.getNicknameOrDisplayname(
                           MatrixLocals(L10n.of(context)),
                         );
                         final spaceChildrenIds = space.spaceChildren

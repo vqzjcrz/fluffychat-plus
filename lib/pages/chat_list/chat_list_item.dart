@@ -7,6 +7,7 @@ import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/active_call_indicator.dart';
 import 'package:fluffychat/pages/chat_list/unread_bubble.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/room_plus_extension.dart';
@@ -55,7 +56,7 @@ class ChatListItem extends StatelessWidget {
     final backgroundColor = activeChat
         ? theme.colorScheme.secondaryContainer
         : null;
-    final displayname = room.getLocalizedDisplayname(
+    final displayname = room.getNicknameOrDisplayname(
       MatrixLocals(L10n.of(context)),
     );
     final filter = this.filter;
@@ -112,7 +113,7 @@ class ChatListItem extends StatelessWidget {
                               ),
                               mxContent: space.avatar,
                               size: Avatar.defaultSize * 0.75,
-                              name: space.getLocalizedDisplayname(),
+                              name: space.getNicknameOrDisplayname(),
                               onTap: () => onLongPress?.call(context),
                             ),
                           ),

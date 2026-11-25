@@ -6,6 +6,7 @@
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/chat.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/date_time_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/sync_status_localization.dart';
@@ -46,7 +47,7 @@ class ChatAppBarTitle extends StatelessWidget {
             tag: 'content_banner',
             child: Avatar(
               mxContent: room.avatar,
-              name: room.getLocalizedDisplayname(
+              name: room.getNicknameOrDisplayname(
                 MatrixLocals(L10n.of(context)),
               ),
               size: 32,
@@ -69,7 +70,7 @@ class ChatAppBarTitle extends StatelessWidget {
                       ),
                     Expanded(
                       child: Text(
-                        room.getLocalizedDisplayname(
+                        room.getNicknameOrDisplayname(
                           MatrixLocals(L10n.of(context)),
                         ),
                         maxLines: 1,

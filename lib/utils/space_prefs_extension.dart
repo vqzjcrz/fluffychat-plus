@@ -8,13 +8,15 @@ import 'package:fluffychat/utils/custom_order_extension.dart';
 import 'package:matrix/matrix.dart';
 
 /// Account data event that stores per-space view settings: how the chats in a
-/// space are sorted and which chats are pinned to the top of it.
+/// space are sorted, which chats are pinned to the top of it and its accent
+/// color.
 ///
 /// Content:
 /// ```json
 /// {
 ///   "sort": { "!spaceA": "recent" },
-///   "pins": { "!spaceA": ["!room1", "!room2"] }
+///   "pins": { "!spaceA": ["!room1", "!room2"] },
+///   "colors": { "!spaceA": 4283215696 }
 /// }
 /// ```
 const String spacePrefsAccountDataType = 'im.fluffychat.plus.space_prefs';
@@ -73,6 +75,29 @@ extension SpacePrefsExtension on Client {
           pins[spaceId] = list;
         }
         content['pins'] = pins;
+      });
+
+  /// The accent color chosen for [spaceId] as an ARGB value, if any.
+  int? spaceColor(String spaceId) {
+    final colors = _spacePrefsContent['colors'];
+    if (colors is! Map) return null;
+    final value = colors[spaceId];
+    return value is num ? value.toInt() : null;
+  }
+
+  /// Sets the accent color of [spaceId], or removes it when [argb] is null.
+  Future<void> setSpaceColor(String spaceId, int? argb) =>
+      _updateSpacePrefs((content) {
+        final existing = content['colors'];
+        final colors = existing is Map
+            ? Map<String, Object?>.from(existing)
+            : <String, Object?>{};
+        if (argb == null) {
+          colors.remove(spaceId);
+        } else {
+          colors[spaceId] = argb;
+        }
+        content['colors'] = colors;
       });
 
   Future<void> _updateSpacePrefs(

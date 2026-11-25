@@ -13,6 +13,7 @@ import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/call_kit_params.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/client_manager.dart';
 import 'package:fluffychat/utils/home_widget_sync.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
@@ -250,7 +251,7 @@ Future<void> _tryPushHelper(
       : null;
   messagingStyleInformation?.messages?.add(newMessage);
 
-  final roomName = event.room.getLocalizedDisplayname(MatrixLocals(l10n));
+  final roomName = event.room.getNicknameOrDisplayname(MatrixLocals(l10n));
 
   final notificationGroupId = event.room.isDirectChat
       ? 'directChats'
@@ -355,7 +356,7 @@ Future<void> _tryPushHelper(
     iOS: iOSPlatformChannelSpecifics,
   );
 
-  final title = event.room.getLocalizedDisplayname(MatrixLocals(l10n));
+  final title = event.room.getNicknameOrDisplayname(MatrixLocals(l10n));
 
   if (PlatformInfos.isAndroid && messagingStyleInformation == null) {
     await _setShortcut(event, l10n, title, roomAvatarFile);

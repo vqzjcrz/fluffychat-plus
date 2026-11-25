@@ -7,6 +7,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
@@ -138,7 +139,7 @@ class _ShareScaffoldDialogState extends State<ShareScaffoldDialog> {
             itemCount: rooms.length,
             itemBuilder: (context, i) {
               final room = rooms[i];
-              final displayname = room.getLocalizedDisplayname(
+              final displayname = room.getNicknameOrDisplayname(
                 MatrixLocals(L10n.of(context)),
               );
               final value = selectedRoomId == room.id;
