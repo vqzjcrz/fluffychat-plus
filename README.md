@@ -55,6 +55,8 @@ Please report problems with this fork here, not to FluffyChat.
 - **Swipe right for the spaces panel:** in a chat, swipe from left to right anywhere
   to slide open a Discord-style panel with your spaces and their chats, and jump
   straight to another chat. (Off if you set swipe-to-reply to left-to-right.)
+- **Discord-style message box:** the box at the bottom says "Message #channel" (or the
+  person's name) instead of "Unencrypted message".
 - **Select several chats at once:** long-press a chat and choose **Select**, then tap
   more chats (or **Select all**). The top bar then has **Leave** (declines invites),
   **Mark as read** and **Mute** for all of them. Works in the chat list and in spaces.

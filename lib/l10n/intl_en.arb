@@ -3149,5 +3149,14 @@
     "leaveChatsDescription": "Invites among them are declined.",
     "@leaveChatsDescription": {
         "description": "Explanation when leaving several chats"
+    },
+    "messageRoom": "Message {name}",
+    "@messageRoom": {
+        "description": "Hint in the message box, like Discord's \"Message #general\"",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
     }
 }
