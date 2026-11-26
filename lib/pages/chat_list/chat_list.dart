@@ -14,6 +14,7 @@ import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/chat_list_view.dart';
 import 'package:fluffychat/utils/chat_nickname_extension.dart';
+import 'package:fluffychat/utils/declined_invites_extension.dart';
 import 'package:fluffychat/utils/error_reporter.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
@@ -854,7 +855,13 @@ class ChatListController extends State<ChatList>
         if (confirmed == OkCancelResult.cancel) return;
         if (!mounted) return;
 
-        await showFutureLoadingDialog(context: context, future: room.leave);
+        await showFutureLoadingDialog(
+          context: context,
+          // FluffyChat+: declined bridge invites stay declined.
+          future: room.membership == Membership.invite
+              ? () => room.client.declineInvite(room)
+              : room.leave,
+        );
 
         return;
       case ChatContextAction.addToSpace:

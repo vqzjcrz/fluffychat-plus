@@ -55,6 +55,10 @@ Please report problems with this fork here, not to FluffyChat.
 - **Swipe right for the spaces panel:** in a chat, swipe from left to right anywhere
   to slide open a Discord-style panel with your spaces and their chats, and jump
   straight to another chat. (Off if you set swipe-to-reply to left-to-right.)
+- **Declined bridge invites stay declined:** decline an invite that a bridge bot sent
+  (like the Discord bridge re-inviting you after it re-syncs a server) and the app
+  declines it again on its own if the bridge invites you to that room later. Invites
+  from people work as normal, and joining the room on purpose clears it.
 - **Rename chats for yourself:** long-press a chat and choose **Rename for me** to give
   it a name only you see, like for cryptic Discord channels. Leave it empty to go back.
   Synced to your account.
@@ -160,6 +164,7 @@ New files:
 - `lib/utils/personal_pins_extension.dart`, `lib/pages/chat/personal_pinned_events.dart`: personal pins
 - `lib/utils/scheduled_messages.dart`, `lib/widgets/send_later_dialog.dart`: send later
 - `lib/pages/chat/spaces_panel.dart`: swipe-open spaces panel
+- `lib/utils/declined_invites_extension.dart`: keeps declined bridge invites declined
 - `lib/pages/image_viewer/`: swipe down to close videos
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
   `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget
