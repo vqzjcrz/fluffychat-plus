@@ -18,6 +18,7 @@ import 'package:fluffychat/utils/error_reporter.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
+import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/utils/show_scaffold_dialog.dart';
 import 'package:fluffychat/utils/show_update_snackbar.dart';
 import 'package:fluffychat/utils/snooze_extension.dart';
@@ -629,6 +630,26 @@ class ChatListController extends State<ChatList>
               ],
             ),
           ),
+        if (room.canToggleReadOnly)
+          PopupMenuItem(
+            value: ChatContextAction.readOnly,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                Icon(
+                  room.isReadOnlyForMe
+                      ? Icons.lock_open_outlined
+                      : Icons.lock_outline,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  room.isReadOnlyForMe
+                      ? L10n.of(context).unlockChat
+                      : L10n.of(context).makeReadOnly,
+                ),
+              ],
+            ),
+          ),
         if (room.membership == Membership.join) ...[
           PopupMenuItem(
             value: ChatContextAction.mute,
@@ -865,6 +886,13 @@ class ChatListController extends State<ChatList>
         return;
       case ChatContextAction.select:
         toggleRoomSelection(room.id);
+        return;
+      case ChatContextAction.readOnly:
+        await showFutureLoadingDialog(
+          context: context,
+          future: () => room.setReadOnlyForMe(!room.isReadOnlyForMe),
+        );
+        if (mounted) setState(() {});
         return;
       case ChatContextAction.rename:
         await showRenameForMeDialog(context, room);
@@ -1197,6 +1225,7 @@ enum ChatContextAction {
   removeTag,
   markUnread,
   mute,
+  readOnly,
   snooze,
   rename,
   leave,

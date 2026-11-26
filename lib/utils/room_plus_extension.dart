@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:fluffychat/config/setting_keys.dart';
+import 'package:fluffychat/utils/read_only_override_extension.dart';
 import 'package:matrix/matrix.dart';
 
 /// State event types bridges use to describe what they bridge.
@@ -28,11 +29,25 @@ extension RoomPlusExtension on Room {
 
   /// Whether the user is in this chat but can't post in it: the power levels
   /// don't let them send messages (for example a Signal group where only
-  /// admins can post), or it's a read-only Discord portal.
+  /// admins can post), or it's read-only in this app: Discord portals by
+  /// default, or any chat the user switched to read-only.
   bool get isReadOnlyForMe {
     if (membership != Membership.join || isSpace) return false;
-    return !canSendDefaultMessages || isDiscordBridged;
+    if (!canSendDefaultMessages) return true;
+    return client.readOnlyOverride(id) ?? isDiscordBridged;
   }
+
+  /// Whether the user can switch this chat between read-only and writable:
+  /// only where the server lets them post at all.
+  bool get canToggleReadOnly =>
+      membership == Membership.join && !isSpace && canSendDefaultMessages;
+
+  /// Makes this chat read-only or writable for the user. Choosing the default
+  /// for the chat removes the saved choice.
+  Future<void> setReadOnlyForMe(bool readOnly) => client.setReadOnlyOverride(
+    id,
+    readOnly == isDiscordBridged ? null : readOnly,
+  );
 
   /// Whether someone mentioned or replied to the user in unread messages.
   bool get hasUnreadMentions => highlightCount > 0;

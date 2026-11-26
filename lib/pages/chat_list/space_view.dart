@@ -44,6 +44,7 @@ enum SpaceChildAction {
   select,
   category,
   moveToSpace,
+  readOnly,
   pin,
   unpin,
   rename,
@@ -624,6 +625,26 @@ class _SpaceViewState extends State<SpaceView> {
               ],
             ),
           ),
+          if (room.canToggleReadOnly)
+            PopupMenuItem(
+              value: SpaceChildAction.readOnly,
+              child: Row(
+                mainAxisSize: .min,
+                children: [
+                  Icon(
+                    room.isReadOnlyForMe
+                        ? Icons.lock_open_outlined
+                        : Icons.lock_outline,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    room.isReadOnlyForMe
+                        ? L10n.of(context).unlockChat
+                        : L10n.of(context).makeReadOnly,
+                  ),
+                ],
+              ),
+            ),
           PopupMenuItem(
             value: room.pushRuleState == PushRuleState.notify
                 ? SpaceChildAction.mute
@@ -712,6 +733,14 @@ class _SpaceViewState extends State<SpaceView> {
         await _pickCategoryFor([roomId]);
       case SpaceChildAction.moveToSpace:
         await moveRoomsToSpace(context, [room!], fromSpace: space);
+      case SpaceChildAction.readOnly:
+        final chat = room!;
+        await showFutureLoadingDialog(
+          context: context,
+          future: () => chat.setReadOnlyForMe(!chat.isReadOnlyForMe),
+        );
+        if (!mounted) return;
+        setState(() {});
       case SpaceChildAction.pin:
         await _setPinned(roomId, true);
       case SpaceChildAction.unpin:

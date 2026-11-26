@@ -30,6 +30,7 @@ import 'package:fluffychat/utils/ogg_opus_remuxer.dart';
 import 'package:fluffychat/utils/other_party_can_receive.dart';
 import 'package:fluffychat/utils/personal_pins_extension.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
+import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/utils/show_scaffold_dialog.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
@@ -243,6 +244,15 @@ class ChatController extends State<ChatPageWithRoom>
   bool showReadOnlyComposer = false;
 
   void revealReadOnlyComposer() => setState(() => showReadOnlyComposer = true);
+
+  /// Switches this chat between read-only and writable and remembers it.
+  Future<void> setReadOnly(bool readOnly) async {
+    await showFutureLoadingDialog(
+      context: context,
+      future: () => room.setReadOnlyForMe(readOnly),
+    );
+    if (mounted) setState(() => showReadOnlyComposer = false);
+  }
 
   String? get threadLastEventId {
     final threadId = activeThreadId;

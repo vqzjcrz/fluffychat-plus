@@ -88,9 +88,10 @@ Please report problems with this fork here, not to FluffyChat.
   own. Snoozing doesn't change your push rules on the server: the app drops the
   notifications on the device, so the snooze ends even if you don't open the app.
 - **Read-only chats:** where you can't post (for example a Signal group where only
-  admins can send, or a read-only bridged Discord channel), the message box is
-  replaced by a note. In Discord chats, **Send a command** brings the box back so
-  you can still send bridge commands.
+  admins can send), the message box is replaced by a note. Discord chats start out
+  read-only too. Switch any chat you're allowed to post in with **Make read-only** /
+  **Allow posting** in its ⋮ menu or long-press menu, or **Allow posting** on the note.
+  Your choice is saved to your account.
 - **Preset themes:** Settings → Style → **App theme**: AMOLED Black, Nord, Dracula,
   Catppuccin, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Everforest and One Dark.
   Each has a light and a dark variant except AMOLED Black, which is dark only and
@@ -178,6 +179,7 @@ New files:
 - `lib/pages/chat/spaces_panel.dart`: swipe-open spaces panel
 - `lib/widgets/chat_selection_bar.dart`: multi-select bulk actions and move to space
 - `lib/utils/rate_limit_retry.dart`: waits out "Too many requests" during bulk actions
+- `lib/utils/read_only_override_extension.dart`: per-chat read-only switch
 - `lib/pages/image_viewer/`: swipe down to close videos
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
   `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget

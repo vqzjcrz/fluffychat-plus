@@ -6,6 +6,8 @@
 import 'dart:async';
 
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/pages/chat/chat.dart';
+import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,7 @@ import 'package:matrix/matrix.dart';
 
 import 'matrix.dart';
 
-enum ChatPopupMenuActions { details, encryption, leave, search }
+enum ChatPopupMenuActions { details, encryption, readOnly, leave, search }
 
 class ChatSettingsPopupMenu extends StatefulWidget {
   final Room room;
@@ -85,6 +87,19 @@ class ChatSettingsPopupMenuState extends State<ChatSettingsPopupMenu> {
               case ChatPopupMenuActions.encryption:
                 context.go('/rooms/${widget.room.id}/encryption');
                 break;
+              case ChatPopupMenuActions.readOnly:
+                final readOnly = !widget.room.isReadOnlyForMe;
+                final chat = context.findAncestorStateOfType<ChatController>();
+                if (chat != null) {
+                  await chat.setReadOnly(readOnly);
+                } else {
+                  await showFutureLoadingDialog(
+                    context: context,
+                    future: () => widget.room.setReadOnlyForMe(readOnly),
+                  );
+                }
+                if (mounted) setState(() {});
+                break;
             }
           },
           itemBuilder: (BuildContext context) => [
@@ -118,6 +133,25 @@ class ChatSettingsPopupMenuState extends State<ChatSettingsPopupMenu> {
                     const Icon(Icons.lock_outlined),
                     const SizedBox(width: 12),
                     Text(L10n.of(context).encryption),
+                  ],
+                ),
+              ),
+            if (widget.room.canToggleReadOnly)
+              PopupMenuItem<ChatPopupMenuActions>(
+                value: ChatPopupMenuActions.readOnly,
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.room.isReadOnlyForMe
+                          ? Icons.lock_open_outlined
+                          : Icons.lock_outline,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      widget.room.isReadOnlyForMe
+                          ? L10n.of(context).unlockChat
+                          : L10n.of(context).makeReadOnly,
+                    ),
                   ],
                 ),
               ),

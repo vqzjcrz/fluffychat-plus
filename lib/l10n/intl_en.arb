@@ -3234,5 +3234,17 @@
     "moveDown": "Move down",
     "@moveDown": {
         "description": "Moves an item down"
+    },
+    "unlockChat": "Allow posting",
+    "@unlockChat": {
+        "description": "Makes a read-only chat writable again"
+    },
+    "makeReadOnly": "Make read-only",
+    "@makeReadOnly": {
+        "description": "Hides the message box in a chat so you cannot post by accident"
+    },
+    "readOnlyByYouNote": "You made this chat read-only.",
+    "@readOnlyByYouNote": {
+        "description": "Shown instead of the message input in a chat the user made read-only"
     }
 }

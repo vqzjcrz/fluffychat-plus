@@ -462,7 +462,7 @@ class ChatView extends StatelessWidget {
                                                   .canSendDefaultMessages ||
                                               (controller
                                                       .room
-                                                      .isDiscordBridged &&
+                                                      .isReadOnlyForMe &&
                                                   !controller
                                                       .showReadOnlyComposer))
                                     ? controller.room.membership ==

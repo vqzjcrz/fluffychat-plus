@@ -19,8 +19,8 @@ class ReadOnlyComposerNote extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = L10n.of(context);
     final room = controller.room;
-    // Discord portals only block posting on the server, so bridge commands
-    // can still be sent from the normal input.
+    // Read-only in this app only (Discord by default, or switched by the
+    // user): the server would accept messages, so it can be unlocked.
     final canWriteAnyway = room.canSendDefaultMessages;
     return Material(
       color: theme.colorScheme.surfaceContainer,
@@ -39,16 +39,19 @@ class ReadOnlyComposerNote extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  room.isDiscordBridged && canWriteAnyway
+                  !canWriteAnyway
+                      ? l10n.cantPostHereNote
+                      : room.isDiscordBridged
                       ? l10n.readOnlyDiscordNote
-                      : l10n.cantPostHereNote,
+                      : l10n.readOnlyByYouNote,
                   style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
               if (canWriteAnyway)
-                TextButton(
-                  onPressed: controller.revealReadOnlyComposer,
-                  child: Text(l10n.sendCommand),
+                TextButton.icon(
+                  icon: const Icon(Icons.lock_open_outlined, size: 18),
+                  onPressed: () => controller.setReadOnly(false),
+                  label: Text(l10n.unlockChat),
                 ),
             ],
           ),
