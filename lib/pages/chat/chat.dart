@@ -20,7 +20,6 @@ import 'package:fluffychat/pages/chat/trust_user_key_dialog.dart';
 import 'package:fluffychat/pages/chat/utils/web_file_to_x_file.dart';
 import 'package:fluffychat/pages/chat_details/chat_details.dart';
 import 'package:fluffychat/utils/adaptive_bottom_sheet.dart';
-import 'package:fluffychat/utils/declined_invites_extension.dart';
 import 'package:fluffychat/utils/error_reporter.dart';
 import 'package:fluffychat/utils/file_selector.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
@@ -320,10 +319,7 @@ class ChatController extends State<ChatPageWithRoom>
     }
     final success = await showFutureLoadingDialog(
       context: context,
-      // FluffyChat+: declined bridge invites stay declined.
-      future: room.membership == .invite
-          ? () => room.client.declineInvite(room)
-          : room.leave,
+      future: room.leave,
     );
     if (!mounted) return;
     if (success.error != null) return;

@@ -10,7 +10,6 @@ import 'package:collection/collection.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/client_manager.dart';
-import 'package:fluffychat/utils/declined_invites_extension.dart';
 import 'package:fluffychat/utils/home_widget_sync.dart';
 import 'package:fluffychat/utils/init_with_restore.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_file_extension.dart';
@@ -184,7 +183,6 @@ class MatrixState extends State<Matrix> {
   final onReceipts = <String, StreamSubscription>{};
   final onSnoozeUpdate = <String, StreamSubscription>{};
   final onHomeWidgetSync = <String, StreamSubscription>{};
-  final onDeclinedInvites = <String, StreamSubscription>{};
   final onLogoutSub = <String, StreamSubscription<LoginState>>{};
   final onUiaRequest = <String, StreamSubscription<UiaRequest>>{};
 
@@ -328,9 +326,6 @@ class MatrixState extends State<Matrix> {
         ),
       );
     }
-    onDeclinedInvites[name] ??= c.onSync.stream
-        .where((update) => update.rooms?.invite?.isNotEmpty ?? false)
-        .listen(c.handleDeclinedInvites);
     onReceipts[name] ??= c.onSync.stream.listen(
       (syncUpdate) => cancelNotificationsOnSync(
         syncUpdate,
@@ -358,8 +353,6 @@ class MatrixState extends State<Matrix> {
     onSnoozeUpdate.remove(name);
     onHomeWidgetSync[name]?.cancel();
     onHomeWidgetSync.remove(name);
-    onDeclinedInvites[name]?.cancel();
-    onDeclinedInvites.remove(name);
   }
 
   Future<void> initMatrix() async {
@@ -474,10 +467,6 @@ class MatrixState extends State<Matrix> {
       sub.cancel();
     }
     onHomeWidgetSync.clear();
-    for (final sub in onDeclinedInvites.values) {
-      sub.cancel();
-    }
-    onDeclinedInvites.clear();
     onRoomKeyRequestSub.clear();
     onKeyVerificationRequestSub.clear();
     onLogoutSub.clear();
