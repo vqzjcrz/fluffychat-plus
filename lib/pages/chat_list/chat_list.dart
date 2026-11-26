@@ -196,6 +196,33 @@ class ChatListController extends State<ChatList>
     }
   }
 
+  /// FluffyChat+: chats picked for a bulk action. Selection mode is on while
+  /// this isn't empty.
+  final Set<String> selectedRoomIds = {};
+
+  /// The chats the list showed last, for "select all".
+  List<Room> visibleRooms = const [];
+
+  bool get selectMode => selectedRoomIds.isNotEmpty;
+
+  List<Room> get selectedRooms {
+    final client = Matrix.of(context).client;
+    return selectedRoomIds
+        .map(client.getRoomById)
+        .whereType<Room>()
+        .toList();
+  }
+
+  void toggleRoomSelection(String roomId) => setState(() {
+    if (!selectedRoomIds.remove(roomId)) selectedRoomIds.add(roomId);
+  });
+
+  void clearRoomSelection() => setState(selectedRoomIds.clear);
+
+  void selectAllVisibleRooms() => setState(
+    () => selectedRoomIds.addAll(visibleRooms.map((room) => room.id)),
+  );
+
   List<Room> get filteredRooms => Matrix.of(
     context,
   ).client.rooms.where(getRoomFilterByActiveFilter(activeFilter)).toList();
@@ -573,6 +600,17 @@ class ChatListController extends State<ChatList>
       context: posContext,
       position: position,
       items: [
+        PopupMenuItem(
+          value: ChatContextAction.select,
+          child: Row(
+            mainAxisSize: .min,
+            children: [
+              const Icon(Icons.check_circle_outline),
+              const SizedBox(width: 12),
+              Text(L10n.of(context).select),
+            ],
+          ),
+        ),
         if (space != null)
           PopupMenuItem(
             value: ChatContextAction.goToSpace,
@@ -824,6 +862,9 @@ class ChatListController extends State<ChatList>
                 : PushRuleState.notify,
           ),
         );
+        return;
+      case ChatContextAction.select:
+        toggleRoomSelection(room.id);
         return;
       case ChatContextAction.rename:
         await showRenameForMeDialog(context, room);
@@ -1148,6 +1189,7 @@ class ChatListController extends State<ChatList>
 enum EditBundleAction { addToBundle, removeFromBundle }
 
 enum ChatContextAction {
+  select,
   goToSpace,
   favorite,
   lowPriority,

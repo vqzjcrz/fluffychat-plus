@@ -9,6 +9,7 @@ import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/chat_list.dart';
 import 'package:fluffychat/pages/chat_list/client_chooser_button.dart';
 import 'package:fluffychat/utils/sync_status_localization.dart';
+import 'package:fluffychat/widgets/chat_selection_bar.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
@@ -29,6 +30,26 @@ class ChatListHeader extends StatelessWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
     final client = Matrix.of(context).client;
     final isColumnMode = FluffyThemes.isColumnMode(context);
+
+    if (controller.selectMode) {
+      // FluffyChat+: bulk actions for the selected chats.
+      return SliverAppBar(
+        floating: true,
+        pinned: true,
+        toolbarHeight: 72,
+        scrolledUnderElevation: 0,
+        backgroundColor: isColumnMode
+            ? theme.colorScheme.surface.withAlpha(240)
+            : theme.colorScheme.surface,
+        automaticallyImplyLeading: false,
+        title: ChatSelectionBar(
+          rooms: controller.selectedRooms,
+          onClose: controller.clearRoomSelection,
+          onSelectAll: controller.selectAllVisibleRooms,
+          onDone: controller.clearRoomSelection,
+        ),
+      );
+    }
 
     return SliverAppBar(
       floating: true,

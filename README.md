@@ -55,6 +55,9 @@ Please report problems with this fork here, not to FluffyChat.
 - **Swipe right for the spaces panel:** in a chat, swipe from left to right anywhere
   to slide open a Discord-style panel with your spaces and their chats, and jump
   straight to another chat. (Off if you set swipe-to-reply to left-to-right.)
+- **Select several chats at once:** long-press a chat and choose **Select**, then tap
+  more chats (or **Select all**). The top bar then has **Leave** (declines invites),
+  **Mark as read** and **Mute** for all of them. Works in the chat list and in spaces.
 - **Rename chats for yourself:** long-press a chat and choose **Rename for me** to give
   it a name only you see, like for cryptic Discord channels. Leave it empty to go back.
   Synced to your account.
@@ -160,6 +163,7 @@ New files:
 - `lib/utils/personal_pins_extension.dart`, `lib/pages/chat/personal_pinned_events.dart`: personal pins
 - `lib/utils/scheduled_messages.dart`, `lib/widgets/send_later_dialog.dart`: send later
 - `lib/pages/chat/spaces_panel.dart`: swipe-open spaces panel
+- `lib/widgets/chat_selection_bar.dart`: multi-select bulk actions
 - `lib/pages/image_viewer/`: swipe down to close videos
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
   `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget

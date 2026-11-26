@@ -3123,5 +3123,31 @@
     "sendNow": "Send now",
     "@sendNow": {
         "description": "Sends a scheduled message right away"
+    },
+    "selectedChatsCount": "{count} selected",
+    "@selectedChatsCount": {
+        "description": "Title of the bar shown while chats are selected",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "selectAll": "Select all",
+    "@selectAll": {
+        "description": "Selects every chat in the list"
+    },
+    "leaveChatsTitle": "{count, plural, =1{Leave 1 chat?} other{Leave {count} chats?}}",
+    "@leaveChatsTitle": {
+        "description": "Confirmation before leaving several chats",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "leaveChatsDescription": "Invites among them are declined.",
+    "@leaveChatsDescription": {
+        "description": "Explanation when leaving several chats"
     }
 }

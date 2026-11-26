@@ -31,6 +31,9 @@ class ChatListItem extends StatelessWidget {
   final void Function() onTap;
   final String? filter;
 
+  /// FluffyChat+: picked for a bulk action.
+  final bool selected;
+
   const ChatListItem(
     this.room, {
     this.activeChat = false,
@@ -39,6 +42,7 @@ class ChatListItem extends StatelessWidget {
     this.onForget,
     this.filter,
     this.space,
+    this.selected = false,
     super.key,
   });
 
@@ -53,7 +57,9 @@ class ChatListItem extends StatelessWidget {
     final directChatMatrixId = room.directChatMatrixID;
     final isDirectChat = directChatMatrixId != null;
     final hasNotifications = room.notificationCount > 0;
-    final backgroundColor = activeChat
+    final backgroundColor = selected
+        ? theme.colorScheme.tertiaryContainer
+        : activeChat
         ? theme.colorScheme.secondaryContainer
         : null;
     final displayname = room.getNicknameOrDisplayname(
@@ -159,6 +165,22 @@ class ChatListItem extends StatelessWidget {
                             onTap: () => onLongPress?.call(context),
                           ),
                         ),
+                        if (selected)
+                          Positioned.fill(
+                            child: GestureDetector(
+                              onTap: () => onLongPress?.call(context),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.tertiary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.check,
+                                  color: theme.colorScheme.onTertiary,
+                                ),
+                              ),
+                            ),
+                          ),
                         Positioned(
                           top: 0,
                           right: 0,

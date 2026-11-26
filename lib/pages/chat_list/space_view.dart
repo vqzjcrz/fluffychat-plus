@@ -27,6 +27,7 @@ import 'package:fluffychat/utils/stream_extension.dart';
 import 'package:fluffychat/utils/string_color.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
+import 'package:fluffychat/widgets/chat_selection_bar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/hover_builder.dart';
 import 'package:fluffychat/widgets/matrix.dart';
@@ -38,6 +39,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
 enum SpaceChildAction {
+  select,
   pin,
   unpin,
   rename,
@@ -113,6 +115,20 @@ class _SpaceViewState extends State<SpaceView> {
   bool _isLoading = false;
   bool _reorderMode = false;
   bool _mutedExpanded = false;
+
+  /// Chats picked for a bulk action; selection mode is on while not empty.
+  final Set<String> _selectedRoomIds = {};
+
+  /// Chats the list showed last, for "select all".
+  List<String> _visibleRoomIds = const [];
+
+  bool get _selectMode => _selectedRoomIds.isNotEmpty;
+
+  void _toggleSelection(String roomId) => setState(() {
+    if (!_selectedRoomIds.remove(roomId)) _selectedRoomIds.add(roomId);
+  });
+
+  void _clearSelection() => setState(_selectedRoomIds.clear);
 
   StreamSubscription? _childStateSub;
 
@@ -491,6 +507,18 @@ class _SpaceViewState extends State<SpaceView> {
       context: posContext,
       position: position,
       items: [
+        if (room != null && room.membership != Membership.leave)
+          PopupMenuItem(
+            value: SpaceChildAction.select,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                const Icon(Icons.check_circle_outline),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).select),
+              ],
+            ),
+          ),
         if (room != null && room.membership == Membership.join) ...[
           PopupMenuItem(
             value: isPinned ? SpaceChildAction.unpin : SpaceChildAction.pin,
@@ -636,6 +664,8 @@ class _SpaceViewState extends State<SpaceView> {
         if (!mounted) return;
         _nextBatch = null;
         return;
+      case SpaceChildAction.select:
+        _toggleSelection(roomId);
       case SpaceChildAction.pin:
         await _setPinned(roomId, true);
       case SpaceChildAction.unpin:
@@ -829,8 +859,11 @@ class _SpaceViewState extends State<SpaceView> {
         ? null
         : _lastMessagePreview(context, previewRoom);
 
+    final selected = _selectedRoomIds.contains(item.roomId);
     final Color backgroundColor;
-    if (isActive) {
+    if (selected) {
+      backgroundColor = theme.colorScheme.tertiaryContainer;
+    } else if (isActive) {
       backgroundColor = theme.colorScheme.secondaryContainer;
     } else if (hasMentions) {
       backgroundColor = theme.colorScheme.primary.withAlpha(84);
@@ -859,13 +892,32 @@ class _SpaceViewState extends State<SpaceView> {
               left: hasMentions && !isActive ? 4 : 8,
               right: joinedRoom == null ? 0 : 8,
             ),
-            onTap: !reorder && joinedRoom != null
-                ? () => widget.onChatTab(joinedRoom)
-                : null,
-            onLongPress: !reorder && joinedRoom != null
-                ? () => _showSpaceChildEditMenu(context, item.roomId)
-                : null,
-            leading: hovered && !reorder && (isAdmin || joinedRoom != null)
+            onTap: reorder || joinedRoom == null
+                ? null
+                : _selectMode
+                ? () => _toggleSelection(item.roomId)
+                : () => widget.onChatTab(joinedRoom),
+            onLongPress: reorder || joinedRoom == null
+                ? null
+                : _selectMode
+                ? () => _toggleSelection(item.roomId)
+                : () => _showSpaceChildEditMenu(context, item.roomId),
+            leading: selected
+                ? SizedBox.square(
+                    dimension: avatarSize,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.tertiary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check,
+                        size: 18,
+                        color: theme.colorScheme.onTertiary,
+                      ),
+                    ),
+                  )
+                : hovered && !reorder && (isAdmin || joinedRoom != null)
                 ? SizedBox.square(
                     dimension: avatarSize,
                     child: IconButton(
@@ -1008,7 +1060,7 @@ class _SpaceViewState extends State<SpaceView> {
       ),
     );
 
-    if (memberRoom != null && !reorder) {
+    if (memberRoom != null && !reorder && !_selectMode) {
       tile = ClipRRect(
         borderRadius: BorderRadius.circular(AppConfig.borderRadius),
         child: Dismissible(
@@ -1165,6 +1217,15 @@ class _SpaceViewState extends State<SpaceView> {
                     if (expanded) entries.addAll(muted.map(_ChildEntry.new));
                   }
                 }
+                _visibleRoomIds = entries
+                    .whereType<_ChildEntry>()
+                    .where((entry) => _roomFor(client, entry.item) != null)
+                    .map((entry) => entry.item.roomId)
+                    .toList();
+                final selectedRooms = _selectedRoomIds
+                    .map(client.getRoomById)
+                    .whereType<Room>()
+                    .toList();
 
                 return CustomScrollView(
                   slivers: [
@@ -1172,9 +1233,21 @@ class _SpaceViewState extends State<SpaceView> {
                       toolbarHeight: 72,
                       floating: true,
                       scrolledUnderElevation: 0,
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: _selectMode
+                          ? theme.colorScheme.surface
+                          : Colors.transparent,
                       automaticallyImplyLeading: false,
-                      title: TextField(
+                      pinned: _selectMode,
+                      title: _selectMode
+                          ? ChatSelectionBar(
+                              rooms: selectedRooms,
+                              onClose: _clearSelection,
+                              onSelectAll: () => setState(
+                                () => _selectedRoomIds.addAll(_visibleRoomIds),
+                              ),
+                              onDone: _clearSelection,
+                            )
+                          : TextField(
                         controller: _filterController,
                         onChanged: (_) => setState(() {}),
                         textInputAction: TextInputAction.search,

@@ -11,6 +11,8 @@ import 'package:fluffychat/pages/chat_list/chat_list_item.dart';
 import 'package:fluffychat/pages/chat_list/dummy_chat_list_item.dart';
 import 'package:fluffychat/pages/chat_list/search_title.dart';
 import 'package:fluffychat/pages/chat_list/space_view.dart';
+import 'package:fluffychat/utils/chat_nickname_extension.dart';
+import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/stream_extension.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/public_room_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
@@ -74,6 +76,18 @@ class ChatListViewBody extends StatelessWidget {
                   spaceDelegateCandidates[room.id] == null,
             )
             .toList();
+        controller.visibleRooms = filter.isEmpty
+            ? rooms
+            : rooms
+                  .where(
+                    (room) => room
+                        .getNicknameOrDisplayname(
+                          MatrixLocals(L10n.of(context)),
+                        )
+                        .toLowerCase()
+                        .contains(filter),
+                  )
+                  .toList();
 
         return CustomScrollView(
           controller: controller.scrollController,
@@ -240,14 +254,24 @@ class ChatListViewBody extends StatelessWidget {
                   itemBuilder: (BuildContext context, int i) {
                     final room = rooms[i];
                     final space = spaceDelegateCandidates[room.id];
+                    // FluffyChat+: in selection mode, taps pick chats.
+                    final selectMode = controller.selectMode;
                     return ChatListItem(
                       room,
                       space: space,
                       key: Key('chat_list_item_${room.id}'),
                       filter: filter,
-                      onTap: () => controller.onChatTap(room),
-                      onLongPress: (context) =>
-                          controller.chatContextAction(room, context, space),
+                      selected: controller.selectedRoomIds.contains(room.id),
+                      onTap: selectMode
+                          ? () => controller.toggleRoomSelection(room.id)
+                          : () => controller.onChatTap(room),
+                      onLongPress: selectMode
+                          ? (_) => controller.toggleRoomSelection(room.id)
+                          : (context) => controller.chatContextAction(
+                              room,
+                              context,
+                              space,
+                            ),
                       activeChat: controller.activeChat == room.id,
                     );
                   },

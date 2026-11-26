@@ -24,9 +24,16 @@ class ChatListView extends StatelessWidget {
         !FluffyThemes.isColumnMode(context) &&
         AppSettings.displayNavigationRail.value;
     return PopScope(
-      canPop: !controller.isSearchMode && controller.activeSpaceId == null,
+      canPop:
+          !controller.isSearchMode &&
+          controller.activeSpaceId == null &&
+          !controller.selectMode,
       onPopInvokedWithResult: (pop, _) {
         if (pop) return;
+        if (controller.selectMode) {
+          controller.clearRoomSelection();
+          return;
+        }
         if (controller.activeSpaceId != null) {
           controller.clearActiveSpace();
           return;
