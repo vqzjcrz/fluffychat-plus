@@ -25,7 +25,9 @@ import 'package:fluffychat/utils/snooze_extension.dart';
 import 'package:fluffychat/utils/space_prefs_extension.dart';
 import 'package:fluffychat/utils/stream_extension.dart';
 import 'package:fluffychat/utils/string_color.dart';
+import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
+import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/chat_selection_bar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
@@ -40,6 +42,8 @@ import 'package:matrix/matrix.dart';
 
 enum SpaceChildAction {
   select,
+  category,
+  moveToSpace,
   pin,
   unpin,
   rename,
@@ -54,6 +58,7 @@ enum SpaceChildAction {
 
 enum SpaceActions {
   addChild,
+  newCategory,
   settings,
   sortRecent,
   sortUnread,
@@ -69,6 +74,8 @@ enum SpaceActions {
   leave,
 }
 
+enum _CategoryAction { rename, moveUp, moveDown, delete }
+
 /// One row of the space list: a section header or a chat.
 sealed class _SpaceListEntry {
   const _SpaceListEntry();
@@ -80,7 +87,16 @@ class _SectionHeader extends _SpaceListEntry {
   final bool? expanded;
   final VoidCallback? onTap;
 
-  const _SectionHeader(this.label, this.icon, {this.expanded, this.onTap});
+  /// Opens the menu of a category header (long-press or the ⋯ button).
+  final VoidCallback? onMenu;
+
+  const _SectionHeader(
+    this.label,
+    this.icon, {
+    this.expanded,
+    this.onTap,
+    this.onMenu,
+  });
 }
 
 class _ChildEntry extends _SpaceListEntry {
@@ -367,6 +383,9 @@ class _SpaceViewState extends State<SpaceView> {
       case SpaceActions.addChild:
         context.go('/rooms/newgroup?space_id=${widget.spaceId}');
         break;
+      case SpaceActions.newCategory:
+        await _createCategory();
+        break;
       case SpaceActions.sortRecent:
         await _setSortMode(SpaceSortMode.recent);
         break;
@@ -519,6 +538,29 @@ class _SpaceViewState extends State<SpaceView> {
               ],
             ),
           ),
+        PopupMenuItem(
+          value: SpaceChildAction.category,
+          child: Row(
+            mainAxisSize: .min,
+            children: [
+              const Icon(Icons.label_outline),
+              const SizedBox(width: 12),
+              Text(L10n.of(context).moveToCategory),
+            ],
+          ),
+        ),
+        if (room != null && room.membership != Membership.leave)
+          PopupMenuItem(
+            value: SpaceChildAction.moveToSpace,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                const Icon(Icons.drive_file_move_outlined),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).moveToSpace),
+              ],
+            ),
+          ),
         if (room != null && room.membership == Membership.join) ...[
           PopupMenuItem(
             value: isPinned ? SpaceChildAction.unpin : SpaceChildAction.pin,
@@ -666,6 +708,10 @@ class _SpaceViewState extends State<SpaceView> {
         return;
       case SpaceChildAction.select:
         _toggleSelection(roomId);
+      case SpaceChildAction.category:
+        await _pickCategoryFor([roomId]);
+      case SpaceChildAction.moveToSpace:
+        await moveRoomsToSpace(context, [room!], fromSpace: space);
       case SpaceChildAction.pin:
         await _setPinned(roomId, true);
       case SpaceChildAction.unpin:
@@ -771,8 +817,9 @@ class _SpaceViewState extends State<SpaceView> {
     final color = theme.colorScheme.onSurfaceVariant;
     return InkWell(
       onTap: header.onTap,
+      onLongPress: header.onMenu,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 16, 4),
+        padding: EdgeInsets.fromLTRB(20, 12, header.onMenu == null ? 16 : 4, 4),
         child: Row(
           children: [
             Icon(header.icon, size: 14, color: color),
@@ -792,10 +839,180 @@ class _SpaceViewState extends State<SpaceView> {
                 size: 18,
                 color: color,
               ),
+            if (header.onMenu != null)
+              IconButton(
+                icon: const Icon(Icons.more_horiz),
+                iconSize: 18,
+                color: color,
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 24),
+                onPressed: header.onMenu,
+              ),
           ],
         ),
       ),
     );
+  }
+
+  /// Asks which category to put [roomIds] in (or none, or a new one).
+  Future<void> _pickCategoryFor(List<String> roomIds) async {
+    if (roomIds.isEmpty) return;
+    final l10n = L10n.of(context);
+    final client = Matrix.of(context).client;
+    final categories = client.spaceCategories(widget.spaceId);
+    const noCategory = '';
+    const newCategory = '\u0000new';
+    final current = roomIds
+        .map((id) => client.spaceCategoryOf(widget.spaceId, id))
+        .toSet();
+    final picked = await showModalActionPopup<String>(
+      context: context,
+      title: l10n.moveToCategory,
+      cancelLabel: l10n.cancel,
+      actions: [
+        for (final category in categories)
+          AdaptiveModalAction(
+            value: category.id,
+            label: category.name,
+            icon: Icon(
+              current.length == 1 && current.first == category.id
+                  ? Icons.check
+                  : Icons.label_outline,
+            ),
+          ),
+        AdaptiveModalAction(
+          value: newCategory,
+          label: l10n.newCategory,
+          icon: const Icon(Icons.add),
+        ),
+        if (current.any((id) => id != null))
+          AdaptiveModalAction(
+            value: noCategory,
+            label: l10n.noCategory,
+            icon: const Icon(Icons.label_off_outlined),
+          ),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    String? categoryId = picked == noCategory ? null : picked;
+    if (picked == newCategory) {
+      categoryId = await _createCategory();
+      if (categoryId == null || !mounted) return;
+    }
+    await showFutureLoadingDialog(
+      context: context,
+      future: () =>
+          client.setSpaceCategoryOf(widget.spaceId, roomIds, categoryId),
+    );
+    if (!mounted) return;
+    setState(_selectedRoomIds.clear);
+  }
+
+  /// Asks for a name and adds a category; returns its ID.
+  Future<String?> _createCategory() async {
+    final l10n = L10n.of(context);
+    final name = await showTextInputDialog(
+      context: context,
+      title: l10n.newCategory,
+      hintText: l10n.categoryName,
+      okLabel: l10n.create,
+      cancelLabel: l10n.cancel,
+      maxLines: 1,
+    );
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty || !mounted) return null;
+    final client = Matrix.of(context).client;
+    final result = await showFutureLoadingDialog(
+      context: context,
+      future: () => client.addSpaceCategory(widget.spaceId, trimmed),
+    );
+    if (mounted) setState(() {});
+    return result.result;
+  }
+
+  Future<void> _showCategoryMenu(SpaceCategory category, int index, int count) async {
+    final l10n = L10n.of(context);
+    final client = Matrix.of(context).client;
+    final action = await showModalActionPopup<_CategoryAction>(
+      context: context,
+      title: category.name,
+      cancelLabel: l10n.cancel,
+      actions: [
+        AdaptiveModalAction(
+          value: _CategoryAction.rename,
+          label: l10n.renameCategory,
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        if (index > 0)
+          AdaptiveModalAction(
+            value: _CategoryAction.moveUp,
+            label: l10n.moveUp,
+            icon: const Icon(Icons.arrow_upward),
+          ),
+        if (index < count - 1)
+          AdaptiveModalAction(
+            value: _CategoryAction.moveDown,
+            label: l10n.moveDown,
+            icon: const Icon(Icons.arrow_downward),
+          ),
+        AdaptiveModalAction(
+          value: _CategoryAction.delete,
+          label: l10n.deleteCategory,
+          icon: const Icon(Icons.delete_outlined),
+          isDestructive: true,
+        ),
+      ],
+    );
+    if (action == null || !mounted) return;
+    switch (action) {
+      case _CategoryAction.rename:
+        final name = await showTextInputDialog(
+          context: context,
+          title: l10n.renameCategory,
+          initialText: category.name,
+          hintText: l10n.categoryName,
+          okLabel: l10n.ok,
+          cancelLabel: l10n.cancel,
+          maxLines: 1,
+        );
+        final trimmed = name?.trim() ?? '';
+        if (trimmed.isEmpty || !mounted) return;
+        await showFutureLoadingDialog(
+          context: context,
+          future: () => client.renameSpaceCategory(
+            widget.spaceId,
+            category.id,
+            trimmed,
+          ),
+        );
+      case _CategoryAction.moveUp:
+      case _CategoryAction.moveDown:
+        await showFutureLoadingDialog(
+          context: context,
+          future: () => client.moveSpaceCategory(
+            widget.spaceId,
+            category.id,
+            action == _CategoryAction.moveUp ? -1 : 1,
+          ),
+        );
+      case _CategoryAction.delete:
+        final consent = await showOkCancelAlertDialog(
+          context: context,
+          title: l10n.deleteCategory,
+          message: l10n.deleteCategoryDescription(category.name),
+          okLabel: l10n.delete,
+          cancelLabel: l10n.cancel,
+          isDestructive: true,
+        );
+        if (consent != OkCancelResult.ok || !mounted) return;
+        await showFutureLoadingDialog(
+          context: context,
+          future: () =>
+              client.deleteSpaceCategory(widget.spaceId, category.id),
+        );
+    }
+    if (mounted) setState(() {});
   }
 
   Widget _swipeBackground(
@@ -1171,14 +1388,26 @@ class _SpaceViewState extends State<SpaceView> {
                 final entries = <_SpaceListEntry>[];
                 if (!_reorderMode) {
                   final pinnedIds = client.pinnedChats(widget.spaceId);
+                  final categories = client.spaceCategories(widget.spaceId);
+                  final inCategory = <String, List<SpaceRoomsChunk$2>>{
+                    for (final category in categories) category.id: [],
+                  };
                   final pinned = <SpaceRoomsChunk$2>[];
                   final normal = <SpaceRoomsChunk$2>[];
                   final muted = <SpaceRoomsChunk$2>[];
                   for (final item in _sortedChildren(client, sortMode)) {
                     if (!matchesFilter(item)) continue;
                     final childRoom = _roomFor(client, item);
+                    final categoryId = client.spaceCategoryOf(
+                      widget.spaceId,
+                      item.roomId,
+                    );
                     if (pinnedIds.contains(item.roomId)) {
                       pinned.add(item);
+                    } else if (categoryId != null &&
+                        inCategory.containsKey(categoryId)) {
+                      // A chat put in a category stays there, muted or not.
+                      inCategory[categoryId]!.add(item);
                     } else if (childRoom != null &&
                         childRoom.membership == Membership.join &&
                         !childRoom.isSpace &&
@@ -1200,6 +1429,32 @@ class _SpaceViewState extends State<SpaceView> {
                     }
                   }
                   entries.addAll(normal.map(_ChildEntry.new));
+                  for (var i = 0; i < categories.length; i++) {
+                    final category = categories[i];
+                    final items = inCategory[category.id]!;
+                    if (filter.isNotEmpty && items.isEmpty) continue;
+                    final expanded = filter.isNotEmpty || !category.collapsed;
+                    entries.add(
+                      _SectionHeader(
+                        '${category.name.toUpperCase()} · ${items.length}',
+                        Icons.label_outline,
+                        expanded: expanded,
+                        onTap: filter.isNotEmpty
+                            ? null
+                            : () async {
+                                await client.setSpaceCategoryCollapsed(
+                                  widget.spaceId,
+                                  category.id,
+                                  !category.collapsed,
+                                );
+                                if (mounted) setState(() {});
+                              },
+                        onMenu: () =>
+                            _showCategoryMenu(category, i, categories.length),
+                      ),
+                    );
+                    if (expanded) entries.addAll(items.map(_ChildEntry.new));
+                  }
                   if (muted.isNotEmpty) {
                     final expanded = _mutedExpanded || filter.isNotEmpty;
                     entries.add(
@@ -1241,6 +1496,9 @@ class _SpaceViewState extends State<SpaceView> {
                       title: _selectMode
                           ? ChatSelectionBar(
                               rooms: selectedRooms,
+                              currentSpace: room,
+                              onCategory: () =>
+                                  _pickCategoryFor(_selectedRoomIds.toList()),
                               onClose: _clearSelection,
                               onSelectAll: () => setState(
                                 () => _selectedRoomIds.addAll(_visibleRoomIds),
@@ -1375,6 +1633,13 @@ class _SpaceViewState extends State<SpaceView> {
                                   ),
                                 ),
                               const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: SpaceActions.newCategory,
+                                child: ListTile(
+                                  leading: const Icon(Icons.new_label_outlined),
+                                  title: Text(l10n.newCategory),
+                                ),
+                              ),
                               _sortMenuItem(
                                 context,
                                 value: SpaceActions.sortRecent,

@@ -8,20 +8,58 @@ import 'package:fluffychat/utils/custom_order_extension.dart';
 import 'package:matrix/matrix.dart';
 
 /// Account data event that stores per-space view settings: how the chats in a
-/// space are sorted, which chats are pinned to the top of it and its accent
-/// color.
+/// space are sorted, which chats are pinned to the top of it, its accent
+/// color and the user's own categories for grouping its chats.
 ///
 /// Content:
 /// ```json
 /// {
 ///   "sort": { "!spaceA": "recent" },
 ///   "pins": { "!spaceA": ["!room1", "!room2"] },
-///   "colors": { "!spaceA": 4283215696 }
+///   "colors": { "!spaceA": 4283215696 },
+///   "categories": { "!spaceA": [{ "id": "c1", "name": "Work", "collapsed": false }] },
+///   "category_of": { "!spaceA": { "!room1": "c1" } }
 /// }
 /// ```
+///
+/// Categories only exist in this client: they need no permissions in the
+/// space and nobody else sees them.
 const String spacePrefsAccountDataType = 'im.fluffychat.plus.space_prefs';
 
 enum SpaceSortMode { recent, unread, custom }
+
+/// A heading in a space that groups some of its chats.
+class SpaceCategory {
+  final String id;
+  final String name;
+  final bool collapsed;
+
+  const SpaceCategory({
+    required this.id,
+    required this.name,
+    this.collapsed = false,
+  });
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    if (collapsed) 'collapsed': true,
+  };
+
+  static SpaceCategory? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final id = json['id'];
+    final name = json['name'];
+    if (id is! String || name is! String) return null;
+    return SpaceCategory(id: id, name: name, collapsed: json['collapsed'] == true);
+  }
+
+  SpaceCategory copyWith({String? name, bool? collapsed}) => SpaceCategory(
+    id: id,
+    name: name ?? this.name,
+    collapsed: collapsed ?? this.collapsed,
+  );
+}
 
 extension SpacePrefsExtension on Client {
   Map<String, Object?> get _spacePrefsContent =>
@@ -99,6 +137,136 @@ extension SpacePrefsExtension on Client {
         }
         content['colors'] = colors;
       });
+
+  /// The categories of [spaceId], in display order.
+  List<SpaceCategory> spaceCategories(String spaceId) {
+    final all = _spacePrefsContent['categories'];
+    final list = all is Map ? all[spaceId] : null;
+    if (list is! List) return const [];
+    return list.map(SpaceCategory.fromJson).whereType<SpaceCategory>().toList();
+  }
+
+  /// Which category of [spaceId] the chat [roomId] is in, if any.
+  String? spaceCategoryOf(String spaceId, String roomId) {
+    final all = _spacePrefsContent['category_of'];
+    final map = all is Map ? all[spaceId] : null;
+    if (map is! Map) return null;
+    final id = map[roomId];
+    return id is String ? id : null;
+  }
+
+  Future<void> _setCategories(String spaceId, List<SpaceCategory> categories) =>
+      _updateSpacePrefs((content) {
+        final existing = content['categories'];
+        final all = existing is Map
+            ? Map<String, Object?>.from(existing)
+            : <String, Object?>{};
+        if (categories.isEmpty) {
+          all.remove(spaceId);
+        } else {
+          all[spaceId] = categories.map((c) => c.toJson()).toList();
+        }
+        content['categories'] = all;
+      });
+
+  /// Adds a category at the end of [spaceId] and returns its ID.
+  Future<String> addSpaceCategory(String spaceId, String name) async {
+    final id = 'c${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    await _setCategories(spaceId, [
+      ...spaceCategories(spaceId),
+      SpaceCategory(id: id, name: name),
+    ]);
+    return id;
+  }
+
+  Future<void> renameSpaceCategory(String spaceId, String id, String name) =>
+      _setCategories(spaceId, [
+        for (final c in spaceCategories(spaceId))
+          c.id == id ? c.copyWith(name: name) : c,
+      ]);
+
+  Future<void> setSpaceCategoryCollapsed(
+    String spaceId,
+    String id,
+    bool collapsed,
+  ) => _setCategories(spaceId, [
+    for (final c in spaceCategories(spaceId))
+      c.id == id ? c.copyWith(collapsed: collapsed) : c,
+  ]);
+
+  /// Moves a category [delta] places up (negative) or down (positive).
+  Future<void> moveSpaceCategory(String spaceId, String id, int delta) {
+    final list = List<SpaceCategory>.from(spaceCategories(spaceId));
+    final from = list.indexWhere((c) => c.id == id);
+    if (from < 0) return Future.value();
+    final to = from + delta;
+    if (to < 0 || to >= list.length) return Future.value();
+    list.insert(to, list.removeAt(from));
+    return _setCategories(spaceId, list);
+  }
+
+  /// Removes a category; its chats go back to having no category.
+  Future<void> deleteSpaceCategory(String spaceId, String id) =>
+      _updateSpacePrefs((content) {
+        final existing = content['categories'];
+        final all = existing is Map
+            ? Map<String, Object?>.from(existing)
+            : <String, Object?>{};
+        final remaining = spaceCategories(
+          spaceId,
+        ).where((c) => c.id != id).map((c) => c.toJson()).toList();
+        if (remaining.isEmpty) {
+          all.remove(spaceId);
+        } else {
+          all[spaceId] = remaining;
+        }
+        content['categories'] = all;
+        content['category_of'] = _withCategoryAssignments(
+          content,
+          spaceId,
+          (map) => map.removeWhere((_, value) => value == id),
+        );
+      });
+
+  /// Puts [roomIds] into category [categoryId] of [spaceId], or takes them out
+  /// of any category when [categoryId] is null.
+  Future<void> setSpaceCategoryOf(
+    String spaceId,
+    Iterable<String> roomIds,
+    String? categoryId,
+  ) => _updateSpacePrefs((content) {
+    content['category_of'] = _withCategoryAssignments(content, spaceId, (map) {
+      for (final roomId in roomIds) {
+        if (categoryId == null) {
+          map.remove(roomId);
+        } else {
+          map[roomId] = categoryId;
+        }
+      }
+    });
+  });
+
+  Map<String, Object?> _withCategoryAssignments(
+    Map<String, Object?> content,
+    String spaceId,
+    void Function(Map<String, Object?> map) update,
+  ) {
+    final existing = content['category_of'];
+    final all = existing is Map
+        ? Map<String, Object?>.from(existing)
+        : <String, Object?>{};
+    final current = all[spaceId];
+    final map = current is Map
+        ? Map<String, Object?>.from(current)
+        : <String, Object?>{};
+    update(map);
+    if (map.isEmpty) {
+      all.remove(spaceId);
+    } else {
+      all[spaceId] = map;
+    }
+    return all;
+  }
 
   Future<void> _updateSpacePrefs(
     void Function(Map<String, Object?> content) update,

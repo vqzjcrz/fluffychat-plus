@@ -58,8 +58,19 @@ Please report problems with this fork here, not to FluffyChat.
 - **Discord-style message box:** the box at the bottom says "Message #channel" (or the
   person's name) instead of "Unencrypted message".
 - **Select several chats at once:** long-press a chat and choose **Select**, then tap
-  more chats (or **Select all**). The top bar then has **Leave** (declines invites),
-  **Mark as read** and **Mute** for all of them. Works in the chat list and in spaces.
+  more chats (or **Select all**). The top bar then has **Move to space**, **Leave**
+  (declines invites) and, under ⋮, **Mark as read** and **Mute** for all of them. Works
+  in the chat list and in spaces. If the server says "Too many requests", it waits and
+  keeps going instead of failing, with a progress bar.
+- **Move chats to another space:** from the selection bar or a chat's long-press menu.
+  Inside a space you can edit, the chats move out of it; from a space you can't edit
+  (like a bridged Discord server), they're added to the new space and stay in the old one.
+- **Categories in spaces:** your own headings to group a space's chats, like Discord
+  categories. Create one from the space's ⋮ menu (**New category**) or while moving a
+  chat. Put chats in with **Move to category** (long-press menu, or for many at once from
+  the selection bar). Tap a heading to collapse it; long-press it or tap ⋯ to rename,
+  reorder or delete it. They're saved to your account, need no permissions in the space
+  and only you see them.
 - **Rename chats for yourself:** long-press a chat and choose **Rename for me** to give
   it a name only you see, like for cryptic Discord channels. Leave it empty to go back.
   Synced to your account.
@@ -165,7 +176,8 @@ New files:
 - `lib/utils/personal_pins_extension.dart`, `lib/pages/chat/personal_pinned_events.dart`: personal pins
 - `lib/utils/scheduled_messages.dart`, `lib/widgets/send_later_dialog.dart`: send later
 - `lib/pages/chat/spaces_panel.dart`: swipe-open spaces panel
-- `lib/widgets/chat_selection_bar.dart`: multi-select bulk actions
+- `lib/widgets/chat_selection_bar.dart`: multi-select bulk actions and move to space
+- `lib/utils/rate_limit_retry.dart`: waits out "Too many requests" during bulk actions
 - `lib/pages/image_viewer/`: swipe down to close videos
 - `android/app/src/main/kotlin/chat/fluffy/fluffychat/ChatWidget.kt`,
   `ChatWidgetConfigureActivity.kt` and `android/app/src/main/res/*/fcp_*`: the widget

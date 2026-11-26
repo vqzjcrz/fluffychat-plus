@@ -3158,5 +3158,81 @@
                 "type": "String"
             }
         }
+    },
+    "moveToSpace": "Move to space",
+    "@moveToSpace": {
+        "description": "Moves the selected chats into another space"
+    },
+    "noSpacesToMoveTo": "You don't have a space you can add chats to. Create a space first.",
+    "@noSpacesToMoveTo": {
+        "description": "Shown when no space can take the chats"
+    },
+    "movedChatsToSpace": "{count, plural, =1{Moved 1 chat to {space}} other{Moved {count} chats to {space}}}",
+    "@movedChatsToSpace": {
+        "description": "After moving chats to a space",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "space": {
+                "type": "String"
+            }
+        }
+    },
+    "addedChatsKeptInSpace": "{count, plural, =1{Added 1 chat to {space}. It also stays in {from}, which you can't change.} other{Added {count} chats to {space}. They also stay in {from}, which you can't change.}}",
+    "@addedChatsKeptInSpace": {
+        "description": "After adding chats to a space when the old space cannot be edited",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "space": {
+                "type": "String"
+            },
+            "from": {
+                "type": "String"
+            }
+        }
+    },
+    "newCategory": "New category",
+    "@newCategory": {
+        "description": "Creates a category in a space"
+    },
+    "categoryName": "Category name",
+    "@categoryName": {
+        "description": "Hint for the category name field"
+    },
+    "moveToCategory": "Move to category",
+    "@moveToCategory": {
+        "description": "Puts chats into a category of the space"
+    },
+    "noCategory": "No category",
+    "@noCategory": {
+        "description": "Takes chats out of their category"
+    },
+    "renameCategory": "Rename category",
+    "@renameCategory": {
+        "description": "Renames a category"
+    },
+    "deleteCategory": "Delete category",
+    "@deleteCategory": {
+        "description": "Deletes a category"
+    },
+    "deleteCategoryDescription": "Delete \"{name}\"? Its chats stay in the space without a category.",
+    "@deleteCategoryDescription": {
+        "description": "Confirmation before deleting a category",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "moveUp": "Move up",
+    "@moveUp": {
+        "description": "Moves an item up"
+    },
+    "moveDown": "Move down",
+    "@moveDown": {
+        "description": "Moves an item down"
     }
 }
