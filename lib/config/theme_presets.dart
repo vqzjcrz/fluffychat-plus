@@ -52,10 +52,14 @@ class ThemePreset {
       brightness: brightness,
       primary: c.accent,
       onPrimary: c.onAccent,
-      primaryContainer: c.ownBubble,
-      onPrimaryContainer: c.onOwnBubble,
-      primaryFixed: c.ownLink,
-      onPrimaryFixed: c.ownBubble,
+      // FluffyChat uses these for icons and highlights on normal
+      // backgrounds, so they follow the usual Material meaning. Bubbles get
+      // their colors from PlusColors instead.
+      primaryContainer: mix(c.background, c.accent, dark ? 0.24 : 0.16),
+      onPrimaryContainer: c.text,
+      primaryFixed: c.accent,
+      primaryFixedDim: mix(c.accent, c.background, 0.2),
+      onPrimaryFixed: c.onAccent,
       secondary: c.accent,
       onSecondary: c.onAccent,
       secondaryContainer: c.raised,

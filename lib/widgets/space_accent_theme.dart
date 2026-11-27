@@ -13,8 +13,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
 /// Swaps the accent colors of [theme] for ones made from [seed], keeping its
-/// backgrounds, so preset themes like AMOLED stay intact.
+/// backgrounds and text colors, so the theme's readability stays intact.
 ThemeData themeWithSpaceAccent(ThemeData theme, Color seed) {
+  final light = theme.brightness == Brightness.light;
   final accent = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: theme.brightness,
@@ -22,34 +23,71 @@ ThemeData themeWithSpaceAccent(ThemeData theme, Color seed) {
   );
   final plus =
       theme.extension<PlusColors>() ?? PlusColors.fromScheme(theme.colorScheme);
-  final light = theme.brightness == Brightness.light;
+  final primary = accent.primary;
+  final onPrimary = _readableOn(primary);
+  Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
+
+  // Themes whose own bubbles are the accent itself (Mono) keep that; the
+  // others get a deeper shade with white text, like their own bubbles.
+  final bubbleIsAccent = plus.ownBubble == plus.accent;
+  final ownBubble = bubbleIsAccent
+      ? primary
+      : light
+      ? _darkenUntilReadable(primary)
+      : _darkenUntilReadable(mix(primary, Colors.black, 0.45));
+  final onOwnBubble = bubbleIsAccent ? onPrimary : Colors.white;
+  final ownLink = bubbleIsAccent
+      ? mix(onPrimary, primary, 0.3)
+      : mix(primary, Colors.white, 0.7);
+  final container = mix(plus.background, primary, light ? 0.16 : 0.24);
+
   return theme.copyWith(
     extensions: [
       plus.copyWith(
-        accent: accent.primary,
-        onAccent: accent.onPrimary,
-        ownBubble: light ? accent.primary : accent.primaryContainer,
-        onOwnBubble: light ? accent.onPrimary : accent.onPrimaryContainer,
-        ownLink: light ? accent.primaryFixed : accent.onTertiaryContainer,
+        accent: primary,
+        onAccent: onPrimary,
+        ownBubble: ownBubble,
+        onOwnBubble: onOwnBubble,
+        ownLink: ownLink,
       ),
     ],
     colorScheme: theme.colorScheme.copyWith(
-      primary: accent.primary,
-      onPrimary: accent.onPrimary,
-      primaryContainer: accent.primaryContainer,
-      onPrimaryContainer: accent.onPrimaryContainer,
-      secondary: accent.secondary,
-      onSecondary: accent.onSecondary,
-      secondaryContainer: accent.secondaryContainer,
-      onSecondaryContainer: accent.onSecondaryContainer,
-      tertiary: accent.tertiary,
-      onTertiary: accent.onTertiary,
-      tertiaryContainer: accent.tertiaryContainer,
-      onTertiaryContainer: accent.onTertiaryContainer,
-      inversePrimary: accent.inversePrimary,
-      surfaceTint: accent.primary,
+      primary: primary,
+      onPrimary: onPrimary,
+      primaryContainer: container,
+      onPrimaryContainer: plus.text,
+      primaryFixed: primary,
+      onPrimaryFixed: onPrimary,
+      secondary: primary,
+      onSecondary: onPrimary,
+      tertiary: primary,
+      onTertiary: onPrimary,
+      inversePrimary: primary,
     ),
   );
+}
+
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  return ((la > lb ? la : lb) + 0.05) / ((la > lb ? lb : la) + 0.05);
+}
+
+/// Near-black or white, whichever reads better on [background].
+Color _readableOn(Color background) {
+  const dark = Color(0xFF0A0A0A);
+  return _contrast(dark, background) >= _contrast(Colors.white, background)
+      ? dark
+      : Colors.white;
+}
+
+/// Darkens [color] until white text on it reaches 4.5:1.
+Color _darkenUntilReadable(Color color) {
+  var result = color;
+  for (var i = 0; i < 12 && _contrast(Colors.white, result) < 4.5; i++) {
+    result = Color.lerp(result, Colors.black, 0.12)!;
+  }
+  return result;
 }
 
 /// The color of the space a chat belongs to. When the chat is in several
