@@ -1477,15 +1477,26 @@ class _SpaceViewState extends State<SpaceView> {
                       _SectionHeader(l10n.pinned, Icons.push_pin_outlined),
                     );
                     entries.addAll(pinned.map(_ChildEntry.new));
-                    if (normal.isNotEmpty) {
-                      entries.add(
-                        _SectionHeader(l10n.chats, Icons.forum_outlined),
-                      );
-                    }
                   }
-                  entries.addAll(normal.map(_ChildEntry.new));
-                  for (var i = 0; i < categories.length; i++) {
-                    final category = categories[i];
+                  // Categories and the chats without one, in the order the
+                  // user arranged them.
+                  final order = client.spaceBlockOrder(widget.spaceId);
+                  final categoriesById = {
+                    for (final category in categories) category.id: category,
+                  };
+                  for (var i = 0; i < order.length; i++) {
+                    final blockId = order[i];
+                    if (blockId == null) {
+                      if (normal.isNotEmpty &&
+                          (pinned.isNotEmpty || i > 0)) {
+                        entries.add(
+                          _SectionHeader(l10n.chats, Icons.forum_outlined),
+                        );
+                      }
+                      entries.addAll(normal.map(_ChildEntry.new));
+                      continue;
+                    }
+                    final category = categoriesById[blockId]!;
                     final items = inCategory[category.id]!;
                     if (filter.isNotEmpty && items.isEmpty) continue;
                     final expanded = filter.isNotEmpty || !category.collapsed;
@@ -1505,7 +1516,7 @@ class _SpaceViewState extends State<SpaceView> {
                                 if (mounted) setState(() {});
                               },
                         onMenu: () =>
-                            _showCategoryMenu(category, i, categories.length),
+                            _showCategoryMenu(category, i, order.length),
                       ),
                     );
                     if (expanded) entries.addAll(items.map(_ChildEntry.new));

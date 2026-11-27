@@ -18,7 +18,8 @@ import 'package:matrix/matrix.dart';
 ///   "pins": { "!spaceA": ["!room1", "!room2"] },
 ///   "colors": { "!spaceA": 4283215696 },
 ///   "categories": { "!spaceA": [{ "id": "c1", "name": "Work", "collapsed": false }] },
-///   "category_of": { "!spaceA": { "!room1": "c1" } }
+///   "category_of": { "!spaceA": { "!room1": "c1" } },
+///   "chats_pos": { "!spaceA": 1 }
 /// }
 /// ```
 ///
@@ -195,14 +196,60 @@ extension SpacePrefsExtension on Client {
   ]);
 
   /// Moves a category [delta] places up (negative) or down (positive).
+  /// Where the chats without a category go among the categories of
+  /// [spaceId]: 0 is above all of them, which is the default.
+  int spaceChatsPosition(String spaceId) {
+    final all = _spacePrefsContent['chats_pos'];
+    final value = all is Map ? all[spaceId] : null;
+    final count = spaceCategories(spaceId).length;
+    if (value is! num) return 0;
+    final position = value.toInt();
+    return position < 0 ? 0 : (position > count ? count : position);
+  }
+
+  /// The order of the blocks in [spaceId]: category IDs, with null where
+  /// the chats without a category go.
+  List<String?> spaceBlockOrder(String spaceId) {
+    final order = <String?>[
+      for (final category in spaceCategories(spaceId)) category.id,
+    ];
+    order.insert(spaceChatsPosition(spaceId), null);
+    return order;
+  }
+
+  /// Moves a category [delta] places up (negative) or down (positive),
+  /// counting the chats without a category as one place.
   Future<void> moveSpaceCategory(String spaceId, String id, int delta) {
-    final list = List<SpaceCategory>.from(spaceCategories(spaceId));
-    final from = list.indexWhere((c) => c.id == id);
+    final order = spaceBlockOrder(spaceId);
+    final from = order.indexOf(id);
     if (from < 0) return Future.value();
     final to = from + delta;
-    if (to < 0 || to >= list.length) return Future.value();
-    list.insert(to, list.removeAt(from));
-    return _setCategories(spaceId, list);
+    if (to < 0 || to >= order.length) return Future.value();
+    order.insert(to, order.removeAt(from));
+    final byId = {for (final c in spaceCategories(spaceId)) c.id: c};
+    final categories = [
+      for (final blockId in order)
+        if (blockId != null) byId[blockId]!,
+    ];
+    final chatsPosition = order.indexOf(null);
+    return _updateSpacePrefs((content) {
+      final existing = content['categories'];
+      final all = existing is Map
+          ? Map<String, Object?>.from(existing)
+          : <String, Object?>{};
+      all[spaceId] = categories.map((c) => c.toJson()).toList();
+      content['categories'] = all;
+      final existingPos = content['chats_pos'];
+      final positions = existingPos is Map
+          ? Map<String, Object?>.from(existingPos)
+          : <String, Object?>{};
+      if (chatsPosition == 0) {
+        positions.remove(spaceId);
+      } else {
+        positions[spaceId] = chatsPosition;
+      }
+      content['chats_pos'] = positions;
+    });
   }
 
   /// Removes a category; its chats go back to having no category.
