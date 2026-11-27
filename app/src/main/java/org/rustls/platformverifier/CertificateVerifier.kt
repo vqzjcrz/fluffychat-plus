@@ -1,8 +1,10 @@
 // From rustls-platform-verifier v0.7.1 (https://github.com/rustls/rustls-platform-verifier),
 // licensed under Apache-2.0 or MIT. Used by the Matrix SDK to check TLS certificates
 // against Android's certificate store. Switchboard changes: a BuildConfig stand-in (the
-// library's own build sets TEST from Gradle) and logging of verification failures to the
-// app's log folder. Verification behavior is unchanged.
+// library's own build sets TEST from Gradle), logging of verification failures to the
+// app's log folder, and running the check on a worker thread when it's called on the main
+// thread (where Android forbids the network access revocation checks need). The checks
+// themselves are unchanged.
 package org.rustls.platformverifier
 
 import android.annotation.SuppressLint
@@ -197,7 +199,24 @@ internal object CertificateVerifier {
         time: Long,
         certChain: Array<ByteArray>,
     ): VerificationResult = try {
-        verifyCertificateChainInner(context, serverName, authMethod, allowedEkus, ocspResponse, time, certChain)
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            // Revocation lookups use the network, which Android doesn't allow on the main thread.
+            var result: VerificationResult? = null
+            var error: Throwable? = null
+            val worker = Thread {
+                try {
+                    result = verifyCertificateChainInner(context, serverName, authMethod, allowedEkus, ocspResponse, time, certChain)
+                } catch (t: Throwable) {
+                    error = t
+                }
+            }
+            worker.start()
+            worker.join()
+            error?.let { throw it }
+            result!!
+        } else {
+            verifyCertificateChainInner(context, serverName, authMethod, allowedEkus, ocspResponse, time, certChain)
+        }
     } catch (e: Throwable) {
         // Logged, then passed on unchanged.
         note(context, "verifier exception for $serverName: $e")
@@ -383,7 +402,7 @@ internal object CertificateVerifier {
             try {
                 validator.validate(certFactory.generateCertPath(validChain), parameters)
             } catch (e: CertPathValidatorException) {
-                note(context, "revocation check failed for $serverName: reason=${e.reason} index=${e.index} $e cause=${e.cause}")
+                note(context, "revocation check failed for $serverName: reason=${e.reason} index=${e.index} $e cause=${e.cause} suppressed=${e.suppressed.joinToString { it.toString() + " / " + it.cause }}")
                 return VerificationResult(StatusCode.Revoked, e.toString())
             }
         } else {

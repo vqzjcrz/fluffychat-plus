@@ -183,7 +183,7 @@ class MatrixManager(private val context: Context) {
     private var pendingPassphrase: String? = null
     private var ssoHandler: SsoHandler? = null
 
-    suspend fun checkServer(server: String): ServerInfo {
+    suspend fun checkServer(server: String): ServerInfo = kotlinx.coroutines.withContext(Dispatchers.IO) {
         val dir = newStoreDir()
         val pass = newPassphrase()
         val c = builder(dir, pass)
@@ -194,10 +194,10 @@ class MatrixManager(private val context: Context) {
         pendingLogin = c to dir
         pendingPassphrase = pass
         pendingServer = server.trim()
-        return ServerInfo(d.url(), d.supportsPasswordLogin(), d.supportsSsoLogin(), d.supportsOauthLogin())
+        ServerInfo(d.url(), d.supportsPasswordLogin(), d.supportsSsoLogin(), d.supportsOauthLogin())
     }
 
-    suspend fun loginWithPassword(server: String, user: String, password: String) {
+    suspend fun loginWithPassword(server: String, user: String, password: String) = kotlinx.coroutines.withContext(Dispatchers.IO) {
         if (pendingLogin == null || pendingServer != server.trim()) checkServer(server)
         val (c, dir) = pendingLogin!!
         c.login(user.trim(), password, "Switchboard (Android)", null)
@@ -205,15 +205,15 @@ class MatrixManager(private val context: Context) {
     }
 
     /** Starts SSO in the browser; returns the URL to open. */
-    suspend fun startSso(server: String): String {
+    suspend fun startSso(server: String): String = kotlinx.coroutines.withContext(Dispatchers.IO) {
         if (pendingLogin == null || pendingServer != server.trim()) checkServer(server)
         val (c, _) = pendingLogin!!
         val h = c.startSsoLogin(SSO_REDIRECT, null)
         ssoHandler = h
-        return h.url()
+        h.url()
     }
 
-    suspend fun finishSso(callbackUrl: String) {
+    suspend fun finishSso(callbackUrl: String) = kotlinx.coroutines.withContext(Dispatchers.IO) {
         val h = ssoHandler ?: throw IllegalStateException("No login in progress")
         val (c, dir) = pendingLogin!!
         h.finish(callbackUrl)
@@ -232,7 +232,7 @@ class MatrixManager(private val context: Context) {
         startSync()
     }
 
-    suspend fun logout() {
+    suspend fun logout() = kotlinx.coroutines.withContext(Dispatchers.IO) {
         val c = client
         try { app.switchboard.push.PushSetup.unregister(context) } catch (_: Exception) {}
         try { syncService?.stop() } catch (_: Exception) {}
