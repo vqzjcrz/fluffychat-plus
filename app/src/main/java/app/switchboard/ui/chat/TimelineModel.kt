@@ -231,8 +231,8 @@ object TimelineMapper {
     }
 }
 
-/** Keeps a room's timeline as a list the chat screen can show. */
-class TimelineState(val room: Room) {
+/** Keeps a room's timeline as a list the chat screen can show. [focus] opens it around an older event. */
+class TimelineState(val room: Room, val focus: String? = null) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val raw = ArrayList<TimelineItem>()
     private val diffs = Channel<List<TimelineDiff>>(Channel.UNLIMITED)
@@ -251,7 +251,16 @@ class TimelineState(val room: Room) {
     fun start(onReady: (Timeline) -> Unit = {}) {
         scope.launch {
             try {
-                val t = room.timeline()
+                val t = if (focus == null) room.timeline() else room.timelineWithConfiguration(
+                    org.matrix.rustcomponents.sdk.TimelineConfiguration(
+                        focus = org.matrix.rustcomponents.sdk.TimelineFocus.Event(focus, 25u, uniffi.matrix_sdk_ui.TimelineEventFocusThreadMode.Automatic(false)),
+                        filter = org.matrix.rustcomponents.sdk.TimelineFilter.All,
+                        internalIdPrefix = "focus",
+                        dateDividerMode = org.matrix.rustcomponents.sdk.DateDividerMode.DAILY,
+                        trackReadReceipts = uniffi.matrix_sdk_ui.TimelineReadReceiptTracking.MESSAGE_LIKE_EVENTS,
+                        reportUtds = false,
+                    ),
+                )
                 timeline = t
                 handles += t.addListener(object : TimelineListener {
                     override fun onUpdate(diff: List<TimelineDiff>) { diffs.trySend(diff) }
@@ -263,7 +272,7 @@ class TimelineState(val room: Room) {
                     }
                 })
                 onReady(t)
-                if (raw.size < 20) paginate()
+                if (focus == null && raw.size < 20) paginate()
             } catch (e: Exception) {
                 Log.e(MatrixManager.TAG, "timeline", e)
             }
@@ -299,6 +308,19 @@ class TimelineState(val room: Room) {
             _paginating.value = true
             try { if (t.paginateBackwards(30u)) _atStart.value = true } catch (e: Exception) { Log.w(MatrixManager.TAG, "paginate", e) }
             _paginating.value = false
+        }
+    }
+
+    private var forwardBusy = false
+
+    /** Loads newer messages (only for a timeline opened around an older event). */
+    fun paginateForward() {
+        if (focus == null || forwardBusy) return
+        val t = timeline ?: return
+        forwardBusy = true
+        scope.launch {
+            try { t.paginateForwards(30u) } catch (_: Exception) {}
+            forwardBusy = false
         }
     }
 

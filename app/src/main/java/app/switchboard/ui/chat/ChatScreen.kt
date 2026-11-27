@@ -191,14 +191,18 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
     val swipeLeftToRight by Prefs.swipeToReplyLeftToRight.collectAsState()
     val hideState by Prefs.hideStateEvents.collectAsState()
 
-    val tl = remember(roomId) { TimelineState(room) }
+    var focus by remember(roomId) { mutableStateOf<String?>(null) }
+    val tl = remember(roomId, focus) { TimelineState(room, focus) }
     var info by remember(roomId) { mutableStateOf<org.matrix.rustcomponents.sdk.RoomInfo?>(null) }
     LaunchedEffect(roomId, summary) { info = runCatching { room.roomInfo() }.getOrNull() }
     val composer = remember(roomId) { ComposerState() }
     var members by remember(roomId) { mutableStateOf<List<RoomMember>>(emptyList()) }
     var typing by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
-    DisposableEffect(roomId) {
+    DisposableEffect(tl) {
         tl.start()
+        onDispose { tl.close() }
+    }
+    DisposableEffect(roomId) {
         Sb.matrix.subscribeToRoom(roomId)
         app.switchboard.push.Notifier.activeRoom = roomId
         app.switchboard.push.Notifier.cancel(context, roomId)
@@ -211,7 +215,6 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
         onDispose {
             if (app.switchboard.push.Notifier.activeRoom == roomId) app.switchboard.push.Notifier.activeRoom = null
             h?.cancel()
-            tl.close()
             scope.launch { runCatching { room.typingNotice(false) } }
         }
     }
@@ -234,27 +237,34 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
 
     // Mark as read when new messages show up.
     val lastKey = items.lastOrNull { it is TEvent }?.key
-    LaunchedEffect(lastKey) {
-        if (lastKey != null) {
+    LaunchedEffect(lastKey, focus) {
+        if (lastKey != null && focus == null) {
             delay(400)
             runCatching { tl.timeline?.markAsRead(ReceiptType.READ) }
             if (summary.markedUnread) runCatching { room.setUnreadFlag(false) }
         }
     }
     // Load older messages near the top.
-    LaunchedEffect(listState, reversed.size) {
+    LaunchedEffect(listState, reversed.size, tl) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
             .distinctUntilChanged()
             .collect { last -> if (last >= reversed.size - 6) tl.paginate() }
     }
+    LaunchedEffect(listState, tl) {
+        if (tl.focus != null) snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { first -> if (first <= 3) tl.paginateForward() }
+    }
 
     var highlight by remember { mutableStateOf<String?>(null) }
+    fun indexOf(eventId: String): Int {
+        val list = if (hideState) tl.items.value.filter { it !is TEvent || it.isMessage } else tl.items.value
+        return list.asReversed().indexOfFirst { (it as? TEvent)?.eventId == eventId }
+    }
     fun jumpTo(eventId: String) {
         scope.launch {
-            repeat(15) {
-                val idx = reversed.indexOfFirst { (it as? TEvent)?.eventId == eventId }
-                val cur = tl.items.value.asReversed().indexOfFirst { (it as? TEvent)?.eventId == eventId }
-                val i = if (idx >= 0) idx else cur
+            repeat(3) {
+                val i = indexOf(eventId)
                 if (i >= 0) {
                     listState.animateScrollToItem(i)
                     highlight = eventId
@@ -264,7 +274,17 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
                 tl.paginate()
                 delay(700)
             }
-            nav.toast("That message is too far back")
+            // Too far back for the live timeline: open the chat around that message.
+            focus = eventId
+        }
+    }
+    LaunchedEffect(tl, items.size) {
+        val f = tl.focus ?: return@LaunchedEffect
+        val i = indexOf(f)
+        if (i >= 0 && highlight == null) {
+            listState.scrollToItem(i)
+            highlight = f
+            delay(1800); highlight = null
         }
     }
     LaunchedEffect(focusEventId, items.isNotEmpty()) { if (focusEventId != null && items.isNotEmpty()) jumpTo(focusEventId) }
@@ -299,9 +319,11 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
         val editing = composer.editing
         val reply = composer.replyTo
         composer.clear()
+        if (focus != null) focus = null
+        val focused = tl.focus != null
         scope.launch {
             runCatching { room.typingNotice(false) }
-            val t = tl.timeline ?: return@launch
+            val t = (if (focused) runCatching { room.timeline() }.getOrNull() else tl.timeline) ?: return@launch
             try {
                 val content = Sending.content(md, ids)
                 when {
@@ -350,6 +372,15 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
             }
             Hairline()
             PinsBar(roomId, summary.let { it.id }, items, plus.personalPins(roomId), onJump = { jumpTo(it) }, onOpenList = { pinsSheet = true })
+            if (focus != null) {
+                Row(
+                    Modifier.fillMaxWidth().background(c.accent.copy(alpha = 0.14f)).clickable { focus = null }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Viewing older messages", style = Sbt.small, color = c.text, modifier = Modifier.weight(1f))
+                    Text("Jump to latest", style = Sbt.small, color = c.accent, fontWeight = FontWeight.Bold)
+                }
+            }
             val scheduled = ScheduledMessages.forRoom(roomId, scheduledAll)
             if (scheduled.isNotEmpty()) {
                 Row(
