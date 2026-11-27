@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.switchboard.Screenshots" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-27T21:09:26.740Z" hostname="runnervm3lb7s" time="11.163">
+  <properties/>
+  <testcase name="styles" classname="app.switchboard.Screenshots" time="9.509"/>
+  <testcase name="chat" classname="app.switchboard.Screenshots" time="0.462"/>
+  <testcase name="chats" classname="app.switchboard.Screenshots" time="0.548"/>
+  <testcase name="login" classname="app.switchboard.Screenshots" time="0.392"/>
+  <testcase name="space" classname="app.switchboard.Screenshots" time="0.25"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
