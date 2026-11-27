@@ -1,7 +1,8 @@
 // From rustls-platform-verifier v0.7.1 (https://github.com/rustls/rustls-platform-verifier),
 // licensed under Apache-2.0 or MIT. Used by the Matrix SDK to check TLS certificates
-// against Android's certificate store. Changed only to add the BuildConfig stand-in below
-// (the library's own build sets TEST from Gradle).
+// against Android's certificate store. Switchboard changes: a BuildConfig stand-in (the
+// library's own build sets TEST from Gradle) and logging of verification failures to the
+// app's log folder. Verification behavior is unchanged.
 package org.rustls.platformverifier
 
 import android.annotation.SuppressLint
@@ -188,7 +189,23 @@ internal object CertificateVerifier {
 
     @JvmStatic
     private fun verifyCertificateChain(
-        @Suppress("UNUSED_PARAMETER") context: Context,
+        context: Context,
+        serverName: String,
+        authMethod: String,
+        allowedEkus: Array<String>,
+        ocspResponse: ByteArray?,
+        time: Long,
+        certChain: Array<ByteArray>,
+    ): VerificationResult = try {
+        verifyCertificateChainInner(context, serverName, authMethod, allowedEkus, ocspResponse, time, certChain)
+    } catch (e: Throwable) {
+        // Logged, then passed on unchanged.
+        note(context, "verifier exception for $serverName: $e")
+        throw e
+    }
+
+    private fun verifyCertificateChainInner(
+        context: Context,
         serverName: String,
         authMethod: String,
         allowedEkus: Array<String>,
@@ -285,6 +302,7 @@ internal object CertificateVerifier {
             // In non-test configurations we should have caught expiry errors earlier and
             // can simply return an unknown cert error without digging through the exception
             // cause chain.
+            note(context, "chain not trusted for $serverName: $e")
             return VerificationResult(StatusCode.UnknownCert, e.toString())
         }
 
@@ -365,6 +383,7 @@ internal object CertificateVerifier {
             try {
                 validator.validate(certFactory.generateCertPath(validChain), parameters)
             } catch (e: CertPathValidatorException) {
+                note(context, "revocation check failed for $serverName: reason=${e.reason} index=${e.index} $e cause=${e.cause}")
                 return VerificationResult(StatusCode.Revoked, e.toString())
             }
         } else {
@@ -373,6 +392,15 @@ internal object CertificateVerifier {
         }
 
         return VerificationResult(StatusCode.Ok)
+    }
+
+    private fun note(context: Context, message: String) {
+        Log.w(TAG, message)
+        try {
+            val dir = File(context.filesDir, "logs").apply { mkdirs() }
+            File(dir, "verifier.log").appendText("${java.util.Date()} $message\n")
+        } catch (_: Exception) {
+        }
     }
 
     private fun verifyCertUsage(certificate: X509Certificate, allowedEkus: Array<String>): Boolean {
