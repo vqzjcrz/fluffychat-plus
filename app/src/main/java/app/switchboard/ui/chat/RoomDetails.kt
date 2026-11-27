@@ -293,7 +293,7 @@ fun UserProfileScreen(userId: String, roomId: String?) {
             }
             Hairline()
             if (!own) {
-                ListRow("Send a message", null, Icons.Outlined.Chat) {
+                ListRow("Send a message", null, Icons.AutoMirrored.Outlined.Chat) {
                     scope.launch {
                         try { nav.openChat(openDirectChat(userId)) } catch (e: Exception) { nav.toast("Couldn't start the chat: ${e.message}") }
                     }
