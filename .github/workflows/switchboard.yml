@@ -1,0 +1,103 @@
+# Builds the Switchboard APK on every push to the switchboard branch and
+# publishes it as a GitHub release (tag switchboard-<run number>).
+name: Build Switchboard
+
+on:
+  push:
+    branches: [switchboard]
+  workflow_dispatch:
+    inputs:
+      deps:
+        description: "Also publish the offline dependency bundle"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: switchboard-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+      # Signs with the key already stored in this repository's secrets, so
+      # every build installs over the previous one.
+      - name: Set up signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FLUFFYCHAT_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.FLUFFYCHAT_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/switchboard.p12"
+            {
+              echo "SB_KEYSTORE_PATH=$RUNNER_TEMP/switchboard.p12"
+              echo "SB_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "SB_KEY_ALIAS=plus"
+              echo "SIGNING_NOTE=Signed with your key."
+            } >> "$GITHUB_ENV"
+          else
+            echo "SIGNING_NOTE=Signed with a debug key." >> "$GITHUB_ENV"
+          fi
+      - name: Build APK
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:assembleRelease 2>&1 | tee build.log
+          cp app/build/outputs/apk/release/app-release.apk switchboard.apk
+      - name: Publish build errors
+        if: failure()
+        run: |
+          {
+            echo "Run ${{ github.run_number }} for ${{ github.sha }}"
+            if [ -f build.log ]; then
+              echo "== Error lines =="
+              grep -nE "^e: |error:|Error:|FAILURE|What went wrong|Exception|Could not" build.log | head -300 || true
+              echo "== Last 200 lines =="
+              tail -200 build.log
+            else
+              echo "The build step didn't run; an earlier step failed."
+            fi
+          } > build-errors.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan switchboard-ci-logs
+          git rm -rf --cached . > /dev/null
+          git add -f build-errors.txt
+          git commit -m "Build errors for run ${{ github.run_number }}"
+          git push -f origin switchboard-ci-logs
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: switchboard-${{ github.run_number }}
+          name: Switchboard build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Built from ${{ github.sha }}.
+            ${{ env.SIGNING_NOTE }}
+          files: switchboard.apk
+      # Offline copy of the Gradle and Android SDK downloads, for building
+      # without network access. Only when asked for.
+      - name: Publish dependency bundle
+        if: always() && (inputs.deps || contains(github.event.head_commit.message, '[deps]'))
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gradle --no-daemon :app:compileReleaseKotlin :app:dependencies > /dev/null 2>&1 || true
+          tar -C ~/.gradle/caches -czf sb-gradle-cache.tgz modules-2
+          BT=$(ls $ANDROID_HOME/build-tools | sort -V | grep '^35' | tail -1)
+          tar -C "$ANDROID_HOME" -czf sb-android-sdk.tgz platforms/android-35 "build-tools/$BT" licenses
+          ls -la *.tgz
+          gh release create "switchboard-deps-${{ github.run_number }}" sb-gradle-cache.tgz sb-android-sdk.tgz \
+            --prerelease --title "Switchboard build dependencies ${{ github.run_number }}" \
+            --notes "Offline dependency bundle for building Switchboard. Not an app release." \
+            --target "${{ github.sha }}"
