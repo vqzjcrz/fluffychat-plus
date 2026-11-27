@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -94,7 +95,34 @@ private fun MainScreens(nav: Nav, ui: RoomUi) {
             SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
         }
         RoomUiHost(ui)
+        VerifyPrompt(nav)
     }
+}
+
+/** After logging in on a new device, offers to unlock encrypted messages once. */
+@Composable
+private fun VerifyPrompt(nav: Nav) {
+    val verification by Sb.matrix.verification.collectAsState()
+    val loaded by Sb.matrix.loaded.collectAsState()
+    val key = "verify_prompt_" + (Sb.matrix.userId ?: "")
+    var dismissed by remember { androidx.compose.runtime.mutableStateOf(Prefs.getBool(key)) }
+    if (!loaded || dismissed || verification != org.matrix.rustcomponents.sdk.VerificationState.UNVERIFIED) return
+    fun close() { dismissed = true; Prefs.putBool(key, true) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { close() },
+        title = { androidx.compose.material3.Text("Unlock your encrypted messages") },
+        text = {
+            androidx.compose.material3.Text(
+                "Your chats and spaces are back. To read older encrypted messages on this device, enter your recovery key or confirm from another device where you're logged in.",
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { close(); nav.push(Screen.SettingsSecurity) }) { androidx.compose.material3.Text("Set up now") }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = { close() }) { androidx.compose.material3.Text("Later") }
+        },
+    )
 }
 
 @Composable

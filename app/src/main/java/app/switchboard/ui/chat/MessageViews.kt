@@ -94,6 +94,7 @@ class MessageCallbacks(
     val onSender: (String) -> Unit,
     val onRetry: (TEvent) -> Unit,
     val onVote: (TEvent, String) -> Unit,
+    val onOpenPanel: () -> Unit = {},
 )
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -120,6 +121,7 @@ fun MessageItem(
     val own = ev.isOwn
     val swipeLeftToRight by Prefs.swipeToReplyLeftToRight.collectAsState()
     var dragX by remember { mutableFloatStateOf(0f) }
+    var otherX by remember { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
     val threshold = with(density) { 64.dp.toPx() }
 
@@ -129,12 +131,18 @@ fun MessageItem(
             .padding(start = 14.dp, end = 14.dp, top = if (sameAsPrev) 2.dp else 10.dp, bottom = if (sameAsNext) 1.dp else 4.dp)
             .pointerInput(ev.key, swipeLeftToRight) {
                 detectHorizontalDragGestures(
-                    onDragEnd = { if (abs(dragX) > threshold && ev.canReply) cb.onReply(ev); dragX = 0f },
-                    onDragCancel = { dragX = 0f },
+                    onDragEnd = {
+                        if (abs(dragX) > threshold && ev.canReply) cb.onReply(ev)
+                        else if (!swipeLeftToRight && otherX > threshold * 1.3f) cb.onOpenPanel()
+                        dragX = 0f; otherX = 0f
+                    },
+                    onDragCancel = { dragX = 0f; otherX = 0f },
                 ) { change, amount ->
                     val next2 = dragX + amount
                     val allowed = if (swipeLeftToRight) next2 >= 0 else next2 <= 0
-                    if (allowed) { dragX = next2.coerceIn(-threshold * 1.4f, threshold * 1.4f); change.consume() }
+                    if (allowed) dragX = next2.coerceIn(-threshold * 1.4f, threshold * 1.4f)
+                    else { dragX = 0f; otherX += amount }
+                    change.consume()
                 }
             },
         horizontalAlignment = if (own) Alignment.End else Alignment.Start,

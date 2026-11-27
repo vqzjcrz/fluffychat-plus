@@ -202,8 +202,12 @@ fun SwipeActions(
     val c = Sbt.c
     val read by rememberUpdatedState(onToggleRead)
     val pin by rememberUpdatedState(onPin)
+    val last = androidx.compose.runtime.remember { longArrayOf(0L) }
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { v ->
+            val now = System.currentTimeMillis()
+            if (now - last[0] < 700) return@rememberSwipeToDismissBoxState false
+            if (v != SwipeToDismissBoxValue.Settled) last[0] = now
             when (v) {
                 SwipeToDismissBoxValue.StartToEnd -> read()
                 SwipeToDismissBoxValue.EndToStart -> pin?.invoke()

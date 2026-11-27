@@ -62,6 +62,11 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
     }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
         jniLibs.useLegacyPackaging = true
@@ -101,4 +106,9 @@ dependencies {
     implementation("org.unifiedpush.android:connector:3.0.10")
 
     testImplementation("junit:junit:4.13.2")
+    // Screenshot tests of the main screens (run on CI with [shots] in the commit message)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

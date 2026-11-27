@@ -11,6 +11,10 @@ on:
         description: "Also publish the offline dependency bundle"
         type: boolean
         default: false
+      shots:
+        description: "Also render screenshots of the main screens"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -101,3 +105,37 @@ jobs:
             --prerelease --title "Switchboard build dependencies ${{ github.run_number }}" \
             --notes "Offline dependency bundle for building Switchboard. Not an app release." \
             --target "${{ github.sha }}"
+
+  # Renders the main screens with sample data (Robolectric) and pushes the
+  # PNGs to the switchboard-screens branch. Only when asked for.
+  screens:
+    if: inputs.shots || contains(github.event.head_commit.message, '[shots]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+      - name: Render screens
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:testDebugUnitTest --tests 'app.switchboard.Screenshots' 2>&1 | tee test.log || true
+      - name: Publish screens
+        if: always()
+        run: |
+          mkdir -p out
+          cp app/build/screens/*.png out/ 2>/dev/null || true
+          { grep -nE "^e: |FAILED|Exception|Caused by|error:" test.log | head -120; echo; tail -80 test.log; } > out/log.txt
+          cp -r app/build/test-results out/ 2>/dev/null || true
+          cd out
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b switchboard-screens
+          git add -A
+          git commit -qm "Screens for ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" switchboard-screens

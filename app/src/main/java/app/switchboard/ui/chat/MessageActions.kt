@@ -70,10 +70,12 @@ val quickReactions = listOf("👍", "❤️", "😂", "😮", "😢", "🙏", "�
 @Composable
 fun EmojiPickerSheet(onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val light = Sbt.c.isLight
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = Sbt.c.surface) {
         AndroidView(
             factory = { ctx ->
-                EmojiPickerView(ctx).apply {
+                val themed = android.view.ContextThemeWrapper(ctx, if (light) app.switchboard.R.style.Theme_Switchboard_PickerLight else app.switchboard.R.style.Theme_Switchboard_Picker)
+                EmojiPickerView(themed).apply {
                     setOnEmojiPickedListener { item -> onPick(item.emoji); onDismiss() }
                 }
             },

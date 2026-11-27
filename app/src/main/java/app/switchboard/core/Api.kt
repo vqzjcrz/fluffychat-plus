@@ -27,7 +27,8 @@ object Api {
     fun enc(s: String): String = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject = withContext(Dispatchers.IO) {
-        val s = Sb.matrix.stored?.session ?: throw IllegalStateException("Not logged in")
+        val s = runCatching { Sb.matrix.client?.session() }.getOrNull() ?: Sb.matrix.stored?.session
+            ?: throw IllegalStateException("Not logged in")
         val conn = URL(s.homeserverUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
         conn.requestMethod = method
         conn.connectTimeout = 20_000

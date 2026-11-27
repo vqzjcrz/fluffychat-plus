@@ -42,6 +42,9 @@ object Bridges {
 
     fun get(roomId: String): BridgeInfo? = _info.value[roomId]
 
+    /** Sample data for screenshot tests. */
+    fun setSample(roomId: String, protocol: String, name: String) { _info.value = _info.value + (roomId to BridgeInfo(protocol, name)) }
+
     fun isDiscord(roomId: String): Boolean = get(roomId)?.protocol?.contains("discord", ignoreCase = true) == true
 
     /** Fast guess from member IDs while the real lookup hasn't happened. */

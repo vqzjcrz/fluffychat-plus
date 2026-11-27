@@ -123,6 +123,17 @@ class MatrixManager(private val context: Context) {
             .autoEnableCrossSigning(true)
             .autoEnableBackups(true)
             .backupDownloadStrategy(BackupDownloadStrategy.AFTER_DECRYPTION_FAILURE)
+            .setSessionDelegate(object : org.matrix.rustcomponents.sdk.ClientSessionDelegate {
+                override fun retrieveSessionFromKeychain(userId: String): org.matrix.rustcomponents.sdk.Session =
+                    SessionStore.load()?.session ?: throw IllegalStateException("No saved session")
+                override fun saveSessionInKeychain(session: org.matrix.rustcomponents.sdk.Session) {
+                    // Tokens can be refreshed; keep the saved copy current.
+                    val cur = SessionStore.load() ?: StoredSession(session, storeDir, passphrase)
+                    val updated = cur.copy(session = session)
+                    SessionStore.save(updated)
+                    if (stored?.session?.userId == session.userId) stored = updated
+                }
+            })
     }
 
     /** Restores the saved session, if there is one. */
@@ -142,6 +153,13 @@ class MatrixManager(private val context: Context) {
                 startSync()
             } catch (e: Exception) {
                 Log.e(TAG, "restore failed", e)
+                if (e.message?.contains("M_UNKNOWN_TOKEN") == true) {
+                    // The session was logged out elsewhere.
+                    SessionStore.clear()
+                    stored = null
+                    _auth.value = AuthState.LoggedOut
+                    return@launch
+                }
                 // Keep the session: a network or store hiccup shouldn't log the user out.
                 stored = s
                 _auth.value = AuthState.LoggedIn(s.session.userId)
@@ -161,6 +179,7 @@ class MatrixManager(private val context: Context) {
     data class ServerInfo(val url: String, val password: Boolean, val sso: Boolean, val oauth: Boolean)
 
     private var pendingLogin: Pair<Client, String>? = null
+    private var pendingServer: String? = null
     private var pendingPassphrase: String? = null
     private var ssoHandler: SsoHandler? = null
 
@@ -174,11 +193,12 @@ class MatrixManager(private val context: Context) {
         val d = c.homeserverLoginDetails()
         pendingLogin = c to dir
         pendingPassphrase = pass
+        pendingServer = server.trim()
         return ServerInfo(d.url(), d.supportsPasswordLogin(), d.supportsSsoLogin(), d.supportsOauthLogin())
     }
 
     suspend fun loginWithPassword(server: String, user: String, password: String) {
-        if (pendingLogin == null) checkServer(server)
+        if (pendingLogin == null || pendingServer != server.trim()) checkServer(server)
         val (c, dir) = pendingLogin!!
         c.login(user.trim(), password, "Switchboard (Android)", null)
         finishLogin(c, dir, pendingPassphrase!!)
@@ -186,7 +206,7 @@ class MatrixManager(private val context: Context) {
 
     /** Starts SSO in the browser; returns the URL to open. */
     suspend fun startSso(server: String): String {
-        if (pendingLogin == null) checkServer(server)
+        if (pendingLogin == null || pendingServer != server.trim()) checkServer(server)
         val (c, _) = pendingLogin!!
         val h = c.startSsoLogin(SSO_REDIRECT, null)
         ssoHandler = h
@@ -224,6 +244,7 @@ class MatrixManager(private val context: Context) {
         }
         SessionStore.clear()
         Prefs.clearAll()
+        accountData.reset()
         stored = null
         client = null
         _auth.value = AuthState.LoggedOut
@@ -262,6 +283,14 @@ class MatrixManager(private val context: Context) {
                 sync.start()
                 observeAccount(c)
                 accountData.loadAll()
+                scope.launch {
+                    // Account data arrives with the first syncs; read it again once they're in.
+                    while (!_loaded.value) kotlinx.coroutines.delay(300)
+                    for (wait in listOf(2_000L, 8_000L, 20_000L, 60_000L)) {
+                        kotlinx.coroutines.delay(wait)
+                        accountData.loadAll()
+                    }
+                }
                 Bridges.init(this@MatrixManager)
                 app.switchboard.push.PushSetup.ensureRegistered(context)
             } catch (e: Exception) {
@@ -456,6 +485,15 @@ class MatrixManager(private val context: Context) {
             }
             _summaries.value = map
         }
+    }
+
+    /** Fills the room list with sample data (screenshot tests only). */
+    fun setSampleState(summaries: Map<String, RoomSummary>, order: List<String>, children: Map<String, List<SpaceChildRef>>, profile: UserProfile?) {
+        _summaries.value = summaries
+        _order.value = order
+        _spaceChildren.value = children
+        _profile.value = profile
+        _loaded.value = true
     }
 
     companion object {

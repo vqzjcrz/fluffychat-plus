@@ -91,7 +91,11 @@ fun RoomDetailsScreen(roomId: String) {
     val scope = rememberCoroutineScope()
     val summaries by Sb.matrix.summaries.collectAsState()
     val plus by Sb.matrix.accountData.state.collectAsState()
-    val s = summaries[roomId] ?: run { nav.pop(); return }
+    val s = summaries[roomId]
+    if (s == null) {
+        LaunchedEffect(Unit) { nav.pop() }
+        return
+    }
     var notifSheet by remember { mutableStateOf(false) }
     var canEdit by remember { mutableStateOf(false) }
     LaunchedEffect(roomId) {

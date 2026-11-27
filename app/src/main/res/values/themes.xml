@@ -6,4 +6,7 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowSoftInputMode">adjustResize</item>
     </style>
+    <!-- The emoji picker view expects AppCompat attributes. -->
+    <style name="Theme.Switchboard.Picker" parent="Theme.AppCompat.NoActionBar" />
+    <style name="Theme.Switchboard.PickerLight" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

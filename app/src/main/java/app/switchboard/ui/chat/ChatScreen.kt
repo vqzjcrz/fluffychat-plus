@@ -377,6 +377,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
                         onSender = { nav.push(Screen.UserProfile(it, roomId)) },
                         onRetry = { ev -> scope.launch { runCatching { ev.item.lazyProvider.getSendHandle()?.tryResend() } } },
                         onVote = { ev, answer -> ev.eventId?.let { id -> scope.launch { runCatching { tl.timeline?.sendPollResponse(id, listOf(answer)) } } } },
+                        onOpenPanel = { panel = true },
                     )
                 }
                 LazyColumn(state = listState, reverseLayout = true, modifier = Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {

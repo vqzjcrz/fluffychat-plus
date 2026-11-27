@@ -33,10 +33,23 @@ class AccountDataCache(private val m: MatrixManager) {
     private fun loadLocal(): Map<String, JSONObject> =
         PlusTypes.ALL.associateWith { Prefs.json("ad:$it") }
 
+    private val changedAt = HashMap<String, Long>()
+
+    /** Sample data for screenshot tests. */
+    fun setSample(raw: Map<String, JSONObject>) { _state.value = Plus(raw) }
+
+    /** Forgets everything (after logging out). */
+    fun reset() {
+        changedAt.clear()
+        _state.value = Plus(emptyMap())
+    }
+
     suspend fun loadAll() {
         val c = m.client ?: return
         val map = HashMap(_state.value.raw)
         for (type in PlusTypes.ALL) {
+            // A change made here may not have come back from the server yet.
+            if (System.currentTimeMillis() - (changedAt[type] ?: 0) < 90_000) continue
             try {
                 val raw = c.accountData(type) ?: continue
                 val o = JSONObject(raw)
@@ -54,6 +67,7 @@ class AccountDataCache(private val m: MatrixManager) {
         val content = mutex.withLock {
             val copy = JSONObject(_state.value.obj(type).toString())
             change(copy)
+            changedAt[type] = System.currentTimeMillis()
             _state.value = Plus(_state.value.raw + (type to copy))
             Prefs.putJson("ad:$type", copy)
             copy
