@@ -57,6 +57,7 @@ fun LoginScreen() {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var ssoAvailable by remember { mutableStateOf(false) }
+    var hint by remember { mutableStateOf<String?>(null) }
 
     fun serverFromUser(): String {
         if (server.isNotBlank()) return server.trim()
@@ -100,6 +101,10 @@ fun LoginScreen() {
         if (error != null) {
             Spacer(Modifier.height(12.dp))
             Text(error!!, color = c.danger, style = Sbt.small)
+            hint?.let { Spacer(Modifier.height(6.dp)); Text(it, color = c.textMuted, style = Sbt.small) }
+            androidx.compose.material3.TextButton(onClick = { app.switchboard.core.Diagnostics.shareLogs(context) }) {
+                Text("Share logs", color = c.accent)
+            }
         }
         Spacer(Modifier.height(22.dp))
         Button(
@@ -107,10 +112,12 @@ fun LoginScreen() {
             onClick = {
                 busy = true; error = null
                 scope.launch {
+                    hint = null
                     try {
                         Sb.matrix.loginWithPassword(serverFromUser(), user, password)
                     } catch (e: Exception) {
                         error = friendlyLoginError(e)
+                        if (isConnectionError(e)) hint = app.switchboard.core.Diagnostics.probe(serverFromUser())
                     }
                     busy = false
                 }
@@ -147,13 +154,17 @@ fun LoginScreen() {
     }
 }
 
+fun isConnectionError(e: Exception): Boolean {
+    val m = (e.message ?: "") + e.javaClass.simpleName
+    return m.contains("sending request", true) || m.contains("ServerUnreachable") || m.contains("connect", true) || m.contains("dns", true)
+}
+
 fun friendlyLoginError(e: Exception): String {
     val m = e.message ?: e.toString()
     return when {
         m.contains("M_FORBIDDEN") || m.contains("Invalid username or password", true) -> "Wrong username or password."
         m.contains("sliding sync", true) || m.contains("SlidingSync", true) ->
             "This homeserver doesn't support the sync method Switchboard uses (Simplified Sliding Sync). Update Synapse to a recent version."
-        m.contains("resolve", true) || m.contains("dns", true) || m.contains("connect", true) -> "Couldn't reach that homeserver. Check the address."
         else -> m.take(300)
     }
 }

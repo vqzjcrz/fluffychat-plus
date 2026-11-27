@@ -271,6 +271,8 @@ fun SettingsAboutScreen() {
                 "Inter typeface (SIL Open Font License 1.1), Rasmus Andersson",
             ).forEach { Text("• $it", style = Sbt.small, color = c.textMuted, modifier = Modifier.padding(vertical = 3.dp)) }
             Spacer(Modifier.height(20.dp))
+            Text("Share logs", style = Sbt.body, color = c.accent, modifier = Modifier.clickable { app.switchboard.core.Diagnostics.shareLogs(context) })
+            Spacer(Modifier.height(12.dp))
             Text(
                 "Source code",
                 style = Sbt.body, color = c.accent,
