@@ -41,6 +41,8 @@ data class RoomSummary(
     val topic: String?,
     val alias: String?,
     val heroIds: List<String>,
+    /** Bridge bots and other service members (MSC4171). */
+    val serviceMembers: List<String>,
     val inviterName: String?,
     val isFavourite: Boolean,
     val isLowPriority: Boolean,
@@ -114,6 +116,7 @@ data class RoomSummary(
                 topic = info.topic,
                 alias = info.canonicalAlias,
                 heroIds = heroes,
+                serviceMembers = info.serviceMembers,
                 inviterName = info.inviter?.let { it.displayName ?: it.userId },
                 isFavourite = info.isFavourite,
                 isLowPriority = info.isLowPriority,

@@ -199,6 +199,8 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
     DisposableEffect(roomId) {
         tl.start()
         Sb.matrix.subscribeToRoom(roomId)
+        app.switchboard.push.Notifier.activeRoom = roomId
+        app.switchboard.push.Notifier.cancel(context, roomId)
         var h: TaskHandle? = null
         try {
             h = room.subscribeToTypingNotifications(object : TypingNotificationsListener {
@@ -206,6 +208,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
             })
         } catch (_: Exception) {}
         onDispose {
+            if (app.switchboard.push.Notifier.activeRoom == roomId) app.switchboard.push.Notifier.activeRoom = null
             h?.cancel()
             tl.close()
             scope.launch { runCatching { room.typingNotice(false) } }

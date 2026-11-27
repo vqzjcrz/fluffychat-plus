@@ -35,7 +35,7 @@ object Bridges {
             }
             _info.value = map
             m.scope.launch {
-                m.summaries.collect { rooms -> rooms.keys.forEach { lookup(m, it) } }
+                m.summaries.collect { rooms -> rooms.values.forEach { lookup(m, it) } }
             }
         }
     }
@@ -48,6 +48,13 @@ object Bridges {
     fun guess(userIds: List<String>): String? {
         for (u in userIds) {
             val local = u.removePrefix("@").substringBefore(':')
+            when (local) {
+                "discordbot" -> return "Discord"
+                "signalbot" -> return "Signal"
+                "whatsappbot" -> return "WhatsApp"
+                "instagrambot", "metabot" -> return "Instagram"
+                "telegrambot" -> return "Telegram"
+            }
             when {
                 local.startsWith("discord_") -> return "Discord"
                 local.startsWith("signal_") -> return "Signal"
@@ -59,9 +66,19 @@ object Bridges {
         return null
     }
 
-    private fun lookup(m: MatrixManager, roomId: String) {
+    private fun lookup(m: MatrixManager, s: RoomSummary) {
+        val roomId = s.id
+        if (s.isInvite) return
         synchronized(inFlight) {
             if (_info.value.containsKey(roomId) || !inFlight.add(roomId)) return
+        }
+        // Bridge bots and puppets give it away without asking the server.
+        val guessed = guess(s.serviceMembers + s.heroIds)
+        if (guessed != null) {
+            _info.value = _info.value + (roomId to BridgeInfo(guessed.lowercase(), guessed))
+            synchronized(inFlight) { inFlight.remove(roomId) }
+            save()
+            return
         }
         m.scope.launch {
             gate.withPermit {
@@ -99,7 +116,19 @@ object Bridges {
         return null
     }
 
+    @Volatile private var saveScheduled = false
+
     private fun save() {
+        if (saveScheduled) return
+        saveScheduled = true
+        Sb.matrix.scope.launch {
+            kotlinx.coroutines.delay(3000)
+            saveScheduled = false
+            saveNow()
+        }
+    }
+
+    private fun saveNow() {
         val o = JSONObject()
         _info.value.forEach { (k, v) ->
             o.put(k, if (v == null) JSONObject.NULL else JSONObject().put("p", v.protocol).put("n", v.name))

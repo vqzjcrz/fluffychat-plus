@@ -2,4 +2,9 @@
 <resources>
     <color name="launcher_bg">#000000</color>
     <color name="lime">#D4FF3F</color>
+    <color name="widget_bg">#F20E0E10</color>
+    <color name="widget_text">#FFFFFF</color>
+    <color name="widget_muted">#A1A1AA</color>
+    <color name="widget_accent">#D4FF3F</color>
+    <color name="widget_on_accent">#0A0A0A</color>
 </resources>

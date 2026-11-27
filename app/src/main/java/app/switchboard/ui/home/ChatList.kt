@@ -83,6 +83,7 @@ fun ChatListPane() {
     var query by rememberSaveable { mutableStateOf("") }
 
     val all = remember(summaries, order) { HomeData.allChats(summaries, order) }
+    val typing by app.switchboard.core.Typing.names.collectAsState()
     val shown = remember(all, tab, query, plus) {
         val q = query.trim().lowercase()
         all.filter { s ->
@@ -95,6 +96,7 @@ fun ChatListPane() {
         }
     }
 
+    androidx.compose.runtime.LaunchedEffect(shown.take(40).map { it.id }) { app.switchboard.core.Typing.watch(shown.take(40).map { it.id }) }
     Box(Modifier.fillMaxSize().background(c.background)) {
         Column(Modifier.fillMaxSize()) {
             if (ui.selecting) {
@@ -136,6 +138,7 @@ fun ChatListPane() {
                                 s, plus, selected = s.id in ui.selection,
                                 onClick = { if (ui.selecting) ui.toggle(s.id) else nav.openChat(s.id) },
                                 onLongClick = { if (ui.selecting) ui.toggle(s.id) else ui.roomMenu = s to null },
+                                typing = app.switchboard.core.Typing.text(typing[s.id]),
                             )
                         }
                         Hairline(Modifier.padding(start = 82.dp))

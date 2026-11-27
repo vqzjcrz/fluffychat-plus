@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Switchboard</string>
+    <string name="widget_name">Switchboard chat</string>
+    <string name="widget_description">Recent messages from one chat</string>
+    <string name="widget_pick">Pick a chat</string>
+    <string name="widget_switch">Switch chat</string>
 </resources>

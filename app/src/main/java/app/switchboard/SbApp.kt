@@ -23,6 +23,7 @@ class SbApp : Application(), SingletonImageLoader.Factory by MediaLoader {
         }
         Notifier.createChannels(this)
         Sb.matrix.restore()
+        app.switchboard.widget.ChatWidget.observe(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = Sb.matrix.onForeground()
             override fun onStop(owner: LifecycleOwner) {

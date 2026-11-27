@@ -124,6 +124,7 @@ fun SpaceView(spaceId: String) {
     val layout = remember(spaceId, summaries, order, children, plus, query, bridges) {
         HomeData.spaceLayout(spaceId, summaries, order, children, plus, query)
     }
+    LaunchedEffect(layout.all.map { it.id }) { app.switchboard.core.Typing.watch(layout.all.map { it.id }) }
     val bridge = bridges[spaceId]?.name ?: layout.all.firstNotNullOfOrNull { bridges[it.id]?.name }
     val isDiscord = bridge?.contains("discord", true) == true
     val kicker = listOfNotNull(bridge ?: "Space", "${space.joinedCount} members").joinToString(" · ")
@@ -301,6 +302,7 @@ private fun LazyListScope.roomItems(
 
 @Composable
 private fun SpaceRoomRow(s: RoomSummary, spaceId: String, plus: Plus, discordStyle: Boolean, pinned: Boolean) {
+    val typing by app.switchboard.core.Typing.names.collectAsState()
     val nav = LocalNav.current
     val ui = LocalRoomUi.current
     val scope = rememberCoroutineScope()
@@ -314,7 +316,7 @@ private fun SpaceRoomRow(s: RoomSummary, spaceId: String, plus: Plus, discordSty
         val click = { if (ui.selecting) ui.toggle(s.id) else nav.openChat(s.id) }
         val long = { if (ui.selecting) ui.toggle(s.id) else ui.roomMenu = s to spaceId }
         if (discordStyle && HomeData.isChannel(s)) ChannelRow(s, plus, s.id in ui.selection, click, long)
-        else ChatRow(s, plus, s.id in ui.selection, click, long)
+        else ChatRow(s, plus, s.id in ui.selection, click, long, typing = app.switchboard.core.Typing.text(typing[s.id]))
     }
 }
 
