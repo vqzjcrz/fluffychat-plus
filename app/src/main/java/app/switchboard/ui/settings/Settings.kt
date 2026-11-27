@@ -267,6 +267,7 @@ fun SettingsAboutScreen() {
                 "Coil (Apache License 2.0)",
                 "Reorderable (Apache License 2.0), Calvin Liang",
                 "UnifiedPush connector (Apache License 2.0)",
+                "rustls-platform-verifier (Apache License 2.0 or MIT)",
                 "Inter typeface (SIL Open Font License 1.1), Rasmus Andersson",
             ).forEach { Text("• $it", style = Sbt.small, color = c.textMuted, modifier = Modifier.padding(vertical = 3.dp)) }
             Spacer(Modifier.height(20.dp))

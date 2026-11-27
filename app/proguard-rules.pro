@@ -6,3 +6,7 @@
 -dontwarn java.awt.**
 -dontwarn com.sun.jna.**
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+
+# Called from the Matrix SDK's native code through JNI.
+-keep class org.rustls.platformverifier.** { *; }
+-keep class org.matrix.rustsdk.** { *; }

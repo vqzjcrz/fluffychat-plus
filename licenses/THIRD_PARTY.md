@@ -9,6 +9,7 @@
 | Coil, Coil Contributors | Apache License 2.0 |
 | Reorderable, Calvin Liang | Apache License 2.0 |
 | UnifiedPush android-connector (and Tink), UnifiedPush / Google | Apache License 2.0 |
+| rustls-platform-verifier Android component (`org.rustls.platformverifier.CertificateVerifier`), rustls contributors | Apache License 2.0 or MIT |
 | Inter typeface, Rasmus Andersson | SIL Open Font License 1.1 (see `Inter-OFL.txt`) |
 
 The Apache License 2.0 text: https://www.apache.org/licenses/LICENSE-2.0

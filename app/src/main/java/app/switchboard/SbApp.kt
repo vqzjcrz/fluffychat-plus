@@ -18,6 +18,12 @@ class SbApp : Application(), SingletonImageLoader.Factory by MediaLoader {
         super.onCreate()
         Sb.context = this
         Prefs.init(this)
+        // The SDK checks TLS certificates through Android's trust store; its native
+        // side has to be handed the app context first.
+        runCatching {
+            System.loadLibrary("matrix_sdk_ffi")
+            org.matrix.rustsdk.Android.init(this)
+        }.onFailure { android.util.Log.e("Switchboard", "Android platform init failed", it) }
         runCatching {
             initPlatform(TracingConfiguration(LogLevel.WARN, emptyList(), emptyList(), true, null, null), true)
         }
