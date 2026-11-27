@@ -57,6 +57,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -256,6 +257,17 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
             .collect { first -> if (first <= 3) tl.paginateForward() }
     }
 
+    // Follow new messages: always for your own, and for others' when you're already at the bottom.
+    var sentAt by remember { mutableLongStateOf(0L) }
+    val newest = reversed.firstOrNull { it is TEvent } as? TEvent
+    LaunchedEffect(newest?.key) {
+        if (newest == null || tl.focus != null) return@LaunchedEffect
+        withFrameNanos { }
+        val justSent = System.currentTimeMillis() - sentAt < 10_000
+        if (newest.isOwn && justSent) listState.scrollToItem(0)
+        else if (listState.firstVisibleItemIndex <= 2) listState.animateScrollToItem(0)
+    }
+
     var highlight by remember { mutableStateOf<String?>(null) }
     fun indexOf(eventId: String): Int {
         val list = if (hideState) tl.items.value.filter { it !is TEvent || it.isMessage } else tl.items.value
@@ -333,6 +345,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
                 }
             } catch (e: Exception) { nav.toast("Couldn't send: ${e.message}") }
         }
+        sentAt = System.currentTimeMillis()
         scope.launch { listState.scrollToItem(0) }
     }
 

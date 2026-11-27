@@ -6,12 +6,13 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.StyleSpan
+import android.text.format.DateUtils
 import android.view.View
 import android.widget.RemoteViews
+import android.widget.RemoteViewsService
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -74,10 +75,10 @@ class ChatWidget : AppWidgetProvider() {
     }
 
     companion object {
-        private val LINES = intArrayOf(R.id.widget_line0, R.id.widget_line1, R.id.widget_line2, R.id.widget_line3, R.id.widget_line4, R.id.widget_line5)
+        private const val MAX_MESSAGES = 20
 
         fun roomKey(widgetId: Int) = "widget_room_$widgetId"
-        private fun dataKey(roomId: String) = "widget_data_$roomId"
+        fun dataKey(roomId: String) = "widget_data_$roomId"
 
         fun ids(context: Context): IntArray =
             AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, ChatWidget::class.java))
@@ -116,6 +117,7 @@ class ChatWidget : AppWidgetProvider() {
                 for (roomId in rooms) runCatching { collect(roomId) }
                 val manager = AppWidgetManager.getInstance(app)
                 ids.forEach { render(app, manager, it) }
+                manager.notifyAppWidgetViewDataChanged(ids.toIntArray(), R.id.widget_messages)
             }
         }
 
@@ -140,14 +142,22 @@ class ChatWidget : AppWidgetProvider() {
                     }
                 }
             })
-            delay(250)
-            if (synchronized(items) { items.size } < 8) runCatching { t.paginateBackwards(20u) }
-            delay(250)
-            h.cancel()
             val own = Sb.matrix.userId ?: ""
-            val msgs = synchronized(items) { items.toList() }.mapNotNull { TimelineMapper.map(it, own) as? TEvent }.filter { it.isMessage }.takeLast(6)
+            fun messages() = synchronized(items) { items.toList() }
+                .mapNotNull { TimelineMapper.map(it, own) as? TEvent }.filter { it.isMessage }
+            delay(250)
+            repeat(3) {
+                if (messages().size >= MAX_MESSAGES) return@repeat
+                val done = runCatching { t.paginateBackwards(30u) }.getOrDefault(true)
+                delay(250)
+                if (done) return@repeat
+            }
+            h.cancel()
+            val msgs = messages().takeLast(MAX_MESSAGES)
             val arr = JSONArray()
-            msgs.forEach { arr.put(JSONObject().put("s", if (it.isOwn) "You" else it.senderName).put("t", it.plainText)) }
+            msgs.forEach {
+                arr.put(JSONObject().put("s", if (it.isOwn) "You" else it.senderName).put("t", it.plainText).put("ts", it.ts))
+            }
             val plus = Sb.matrix.accountData.plus
             val name = plus.nickname(roomId) ?: info?.displayName ?: Sb.matrix.summary(roomId)?.realName ?: "Chat"
             val o = JSONObject()
@@ -170,10 +180,18 @@ class ChatWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             v.setOnClickPendingIntent(R.id.widget_switch, switch)
+            val service = Intent(context, ChatWidgetService::class.java)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            service.data = Uri.parse(service.toUri(Intent.URI_INTENT_SCHEME))
+            @Suppress("DEPRECATION")
+            v.setRemoteAdapter(R.id.widget_messages, service)
+            v.setEmptyView(R.id.widget_messages, R.id.widget_empty)
             if (roomId == null) {
                 v.setTextViewText(R.id.widget_title, context.getString(R.string.widget_pick))
+                v.setViewVisibility(R.id.widget_badge, View.GONE)
+                v.setTextViewText(R.id.widget_empty, "Tap to pick a chat")
                 v.setOnClickPendingIntent(R.id.widget_root, switch)
-                LINES.forEach { v.setViewVisibility(it, View.GONE) }
+                v.setOnClickPendingIntent(R.id.widget_empty, switch)
                 manager.updateAppWidget(widgetId, v)
                 return
             }
@@ -186,27 +204,74 @@ class ChatWidget : AppWidgetProvider() {
                 v.setTextViewText(R.id.widget_badge, (if (mention) "@" else "") + if (count > 0) count.toString() else "")
                 v.setInt(R.id.widget_badge, "setBackgroundResource", if (mention) R.drawable.widget_badge_mention else R.drawable.widget_badge)
             } else v.setViewVisibility(R.id.widget_badge, View.GONE)
-            val lines = d.optJSONArray("lines") ?: JSONArray()
-            val n = lines.length()
-            LINES.forEachIndexed { i, id ->
-                val idx = n - LINES.size + i
-                if (idx < 0) { v.setViewVisibility(id, View.GONE); return@forEachIndexed }
-                val o = lines.optJSONObject(idx) ?: return@forEachIndexed
-                val s = o.optString("s"); val t = o.optString("t")
-                val sb = SpannableStringBuilder("$s  $t")
-                sb.setSpan(StyleSpan(android.graphics.Typeface.BOLD), 0, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                v.setTextViewText(id, sb)
-                v.setViewVisibility(id, View.VISIBLE)
-            }
+            v.setTextViewText(R.id.widget_empty, if (d.has("lines")) "No messages yet" else "Open Switchboard to load messages")
+            val openIntent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROOM_ID, roomId)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             val open = PendingIntent.getActivity(
-                context, roomId.hashCode() + widgetId,
-                Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROOM_ID, roomId)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                context, roomId.hashCode() + widgetId, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+            v.setOnClickPendingIntent(R.id.widget_title, open)
+            v.setOnClickPendingIntent(R.id.widget_empty, open)
+            // List rows fill in this template, which must be mutable.
+            val template = PendingIntent.getActivity(
+                context, roomId.hashCode() + widgetId + 1, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or
+                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0),
+            )
+            v.setPendingIntentTemplate(R.id.widget_messages, template)
             v.setOnClickPendingIntent(R.id.widget_root, open)
             manager.updateAppWidget(widgetId, v)
         }
+    }
+}
+
+/** Supplies the widget's scrollable message list. */
+class ChatWidgetService : RemoteViewsService() {
+    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
+        Factory(applicationContext, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID))
+
+    private class Message(val sender: String, val body: String, val ts: Long)
+
+    private class Factory(private val context: Context, private val widgetId: Int) : RemoteViewsFactory {
+        private var messages: List<Message> = emptyList()
+
+        override fun onCreate() {}
+
+        override fun onDataSetChanged() {
+            Prefs.init(context)
+            val roomId = Prefs.getString(ChatWidget.roomKey(widgetId))
+            val lines = roomId?.let { Prefs.json(ChatWidget.dataKey(it)).optJSONArray("lines") } ?: JSONArray()
+            messages = (0 until lines.length()).mapNotNull { i ->
+                lines.optJSONObject(i)?.let { Message(it.optString("s"), it.optString("t"), it.optLong("ts")) }
+            }
+        }
+
+        override fun onDestroy() { messages = emptyList() }
+
+        override fun getCount(): Int = messages.size
+
+        override fun getViewAt(position: Int): RemoteViews {
+            val v = RemoteViews(context.packageName, R.layout.widget_chat_item)
+            val m = messages.getOrNull(position) ?: return v
+            v.setTextViewText(R.id.item_sender, m.sender)
+            v.setTextViewText(R.id.item_body, m.body)
+            v.setTextViewText(
+                R.id.item_time,
+                if (m.ts <= 0L) "" else DateUtils.formatDateTime(
+                    context, m.ts,
+                    if (DateUtils.isToday(m.ts)) DateUtils.FORMAT_SHOW_TIME
+                    else DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH,
+                ),
+            )
+            v.setOnClickFillInIntent(R.id.item_root, Intent())
+            return v
+        }
+
+        override fun getLoadingView(): RemoteViews? = null
+        override fun getViewTypeCount(): Int = 1
+        override fun getItemId(position: Int): Long = position.toLong()
+        override fun hasStableIds(): Boolean = false
     }
 }
 

@@ -96,6 +96,11 @@
                 android:resource="@xml/chat_widget_info" />
         </receiver>
 
+        <service
+            android:name=".widget.ChatWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
         <activity
             android:name=".widget.ChatWidgetConfigureActivity"
             android:exported="true"
