@@ -97,11 +97,9 @@ class ChatView extends StatelessWidget {
               key: Key('chat_page'),
               extendBodyBehindAppBar: true,
               appBar: AppBar(
-                shape: FluffyThemes.isColumnMode(context)
-                    ? Border(
-                        bottom: BorderSide(color: theme.dividerColor, width: 1),
-                      )
-                    : null,
+                shape: Border(
+                  bottom: BorderSide(color: theme.dividerColor, width: 1),
+                ),
                 actionsIconTheme: IconThemeData(
                   color: controller.selectedEvents.isEmpty
                       ? null
@@ -110,7 +108,7 @@ class ChatView extends StatelessWidget {
                 backgroundColor: controller.selectedEvents.isEmpty
                     ? controller.activeThreadId != null
                           ? theme.colorScheme.secondaryContainer
-                          : theme.colorScheme.surface.withAlpha(240)
+                          : theme.colorScheme.surface.withAlpha(245)
                     : theme.colorScheme.tertiaryContainer,
                 automaticallyImplyLeading: false,
                 leading: controller.selectMode
@@ -481,7 +479,14 @@ class ChatView extends StatelessWidget {
                                             : theme
                                                   .colorScheme
                                                   .surfaceContainer,
-                                        borderRadius: BorderRadius.circular(32),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            32,
+                                          ),
+                                          side: BorderSide(
+                                            color: theme.dividerColor,
+                                          ),
+                                        ),
                                         child:
                                             controller.room.membership ==
                                                 .invite

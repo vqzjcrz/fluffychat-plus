@@ -27,12 +27,9 @@ class SettingsStyleController extends State<SettingsStyle> {
     AppSettings.colorSchemeSeedInt.setItem(
       color?.toARGB32() ?? AppSettings.colorSchemeSeedInt.defaultValue,
     );
-    // Presets bring their own accent colors, except AMOLED which keeps the
-    // chosen one. Picking a color switches back to a theme that uses it.
-    final preset = currentPreset;
-    if (preset.isNotEmpty && preset != amoledPresetId) {
-      AppSettings.themePreset.setItem('');
-    }
+    // Presets bring their own accent colors. Picking a color switches to the
+    // Material You theme, which uses it.
+    if (currentPreset.isNotEmpty) AppSettings.themePreset.setItem('');
     ThemeController.of(context).setPrimaryColor(color);
     setState(() {});
   }

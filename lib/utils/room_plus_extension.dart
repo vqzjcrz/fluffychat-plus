@@ -27,6 +27,23 @@ extension RoomPlusExtension on Room {
     return false;
   }
 
+  /// The name of the network a bridge connects this room to, like
+  /// "Discord", if any.
+  String? get bridgeNetworkName {
+    for (final type in bridgeStateEventTypes) {
+      final events = states[type]?.values;
+      if (events == null) continue;
+      for (final event in events) {
+        final protocol = event.content.tryGetMap<String, Object?>('protocol');
+        final name =
+            protocol?.tryGet<String>('displayname') ??
+            protocol?.tryGet<String>('id');
+        if (name != null && name.isNotEmpty) return name;
+      }
+    }
+    return null;
+  }
+
   /// Whether the user is in this chat but can't post in it: the power levels
   /// don't let them send messages (for example a Signal group where only
   /// admins can post), or it's read-only in this app: Discord portals by

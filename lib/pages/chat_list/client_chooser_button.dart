@@ -5,6 +5,7 @@
 
 import 'package:async/async.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/pages/chat_list/navigation_rail.dart';
 import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/matrix.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +19,14 @@ import 'chat_list.dart';
 class ClientChooserButton extends StatelessWidget {
   final ChatListController controller;
 
-  const ClientChooserButton(this.controller, {super.key});
+  /// FluffyChat+: the larger avatar with a gear, for the bottom of the rail.
+  final bool railStyle;
+
+  const ClientChooserButton(
+    this.controller, {
+    this.railStyle = false,
+    super.key,
+  });
 
   List<PopupMenuEntry<Object>> _bundleMenuItems(BuildContext context) {
     final matrix = Matrix.of(context);
@@ -179,17 +187,30 @@ class ClientChooserButton extends StatelessWidget {
         clipBehavior: Clip.hardEdge,
         borderRadius: BorderRadius.circular(99),
         color: Colors.transparent,
-        child: PopupMenuButton<Object>(
-          key: Key('accounts_and_settings_buttons'),
-          tooltip: L10n.of(context).accountsAndSettings,
-          onSelected: (o) => _clientSelected(o, context),
-          itemBuilder: _bundleMenuItems,
-          icon: Avatar(
-            mxContent: snapshot.data?.avatarUrl,
-            name: snapshot.data?.displayName ?? client?.userID?.localpart,
-            size: 32,
-          ),
-        ),
+        child: railStyle
+            ? PopupMenuButton<Object>(
+                key: Key('accounts_and_settings_buttons'),
+                tooltip: L10n.of(context).accountsAndSettings,
+                onSelected: (o) => _clientSelected(o, context),
+                itemBuilder: _bundleMenuItems,
+                child: RailAvatar(
+                  avatarUrl: snapshot.data?.avatarUrl,
+                  name:
+                      snapshot.data?.displayName ?? client?.userID?.localpart,
+                ),
+              )
+            : PopupMenuButton<Object>(
+                key: Key('accounts_and_settings_buttons'),
+                tooltip: L10n.of(context).accountsAndSettings,
+                onSelected: (o) => _clientSelected(o, context),
+                itemBuilder: _bundleMenuItems,
+                icon: Avatar(
+                  mxContent: snapshot.data?.avatarUrl,
+                  name:
+                      snapshot.data?.displayName ?? client?.userID?.localpart,
+                  size: 32,
+                ),
+              ),
       ),
     );
   }

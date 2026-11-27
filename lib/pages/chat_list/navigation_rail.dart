@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/navi_rail_item.dart';
@@ -23,10 +23,15 @@ class SpacesNavigationRail extends StatefulWidget {
   final void Function() onGoToChats;
   final void Function(String) onGoToSpaceId;
 
+  /// Shown at the bottom of the rail: your avatar, which opens the account
+  /// and settings menu. Without one, the avatar opens the settings.
+  final Widget? accountButton;
+
   const SpacesNavigationRail({
     required this.activeSpaceId,
     required this.onGoToChats,
     required this.onGoToSpaceId,
+    this.accountButton,
     super.key,
   });
 
@@ -63,10 +68,10 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
   @override
   Widget build(BuildContext context) {
     final client = Matrix.of(context).client;
-    final coloredMode = !FluffyThemes.isColumnMode(context);
-    final theme = Theme.of(context);
+    final plus = PlusColors.of(context);
+    final columnMode = FluffyThemes.isColumnMode(context);
     return Material(
-      color: coloredMode ? theme.colorScheme.surfaceContainer : null,
+      color: plus.background,
       child: SafeArea(
         child: StreamBuilder(
           key: ValueKey(client.userID.toString()),
@@ -90,25 +95,22 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
             );
 
             return SizedBox(
-              width: FluffyThemes.isColumnMode(context)
-                  ? FluffyThemes.navRailWidth
-                  : FluffyThemes.navRailWidth - 8,
+              width: columnMode ? FluffyThemes.navRailWidth : 68,
               child: Column(
                 children: [
                   Expanded(
                     child: ReorderableListView.builder(
-                      padding: EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       scrollDirection: Axis.vertical,
                       buildDefaultDragHandles: false,
                       header: NaviRailItem(
                         isSelected: widget.activeSpaceId == null,
                         onTap: widget.onGoToChats,
-                        icon: const Padding(
-                          padding: EdgeInsets.all(12.0),
+                        icon: const RailCircle(
                           child: Icon(Icons.forum_outlined),
                         ),
-                        selectedIcon: const Padding(
-                          padding: EdgeInsets.all(12.0),
+                        selectedIcon: const RailCircle(
+                          selected: true,
                           child: Icon(Icons.forum),
                         ),
                         toolTip: L10n.of(context).chats,
@@ -117,8 +119,8 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
                       footer: NaviRailItem(
                         isSelected: false,
                         onTap: () => context.go('/rooms/newspace'),
-                        icon: const Padding(
-                          padding: EdgeInsets.all(12.0),
+                        icon: const RailCircle(
+                          dashed: true,
                           child: Icon(Icons.add),
                         ),
                         toolTip: L10n.of(context).createNewSpace,
@@ -136,6 +138,7 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
                         final spaceChildrenIds = space.spaceChildren
                             .map((c) => c.roomId)
                             .toSet();
+                        final selected = widget.activeSpaceId == space.id;
                         // Long-press (or click and hold) a space to drag it.
                         return ReorderableDelayedDragStartListener(
                           key: ValueKey(space.id),
@@ -143,25 +146,16 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
                           child: NaviRailItem(
                             toolTip: displayname,
                             tooltipOnLongPress: false,
-                            isSelected: widget.activeSpaceId == space.id,
+                            isSelected: selected,
                             onTap: () => widget.onGoToSpaceId(space.id),
                             unreadBadgeFilter: (room) =>
                                 spaceChildrenIds.contains(room.id),
-                            icon: Avatar(
-                              mxContent: space.avatar,
-                              name: displayname,
-                              //size: 36,
-                              shapeBorder: RoundedSuperellipseBorder(
-                                side: BorderSide(
-                                  width: 1,
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  AppConfig.spaceBorderRadius,
-                                ),
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                AppConfig.spaceBorderRadius,
+                            icon: RailSpaceAvatar(
+                              selected: selected,
+                              avatar: Avatar(
+                                mxContent: space.avatar,
+                                name: displayname,
+                                size: 40,
                               ),
                             ),
                           ),
@@ -169,15 +163,80 @@ class _SpacesNavigationRailState extends State<SpacesNavigationRail> {
                       },
                     ),
                   ),
-                  if (FluffyThemes.isColumnMode(context))
+                  if (columnMode)
                     Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.only(top: 8, bottom: 4),
                       child: StartChatFab(),
                     ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 16),
+                    child: widget.accountButton ?? const RailSettingsAvatar(),
+                  ),
                 ],
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Your avatar with a small gear on it, at the bottom of the rail.
+class RailAvatar extends StatelessWidget {
+  final Uri? avatarUrl;
+  final String? name;
+
+  const RailAvatar({this.avatarUrl, this.name, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final plus = PlusColors.of(context);
+    return SizedBox.square(
+      dimension: 48,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Avatar(mxContent: avatarUrl, name: name, size: 42),
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: plus.raised,
+                shape: BoxShape.circle,
+                border: Border.all(color: plus.background, width: 2),
+              ),
+              child: Icon(Icons.settings, size: 11, color: plus.text),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// [RailAvatar] that opens the settings, for rails without the account menu.
+class RailSettingsAvatar extends StatelessWidget {
+  const RailSettingsAvatar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final client = Matrix.of(context).client;
+    return FutureBuilder<Profile>(
+      future: client.isLogged() ? client.fetchOwnProfile() : null,
+      builder: (context, snapshot) => Tooltip(
+        message: L10n.of(context).settings,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => context.go('/rooms/settings'),
+          child: RailAvatar(
+            avatarUrl: snapshot.data?.avatarUrl,
+            name: snapshot.data?.displayName ?? client.userID?.localpart,
+          ),
         ),
       ),
     );

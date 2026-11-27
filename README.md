@@ -10,7 +10,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 An unofficial fork of [FluffyChat](https://github.com/krille-chan/fluffychat), the open
 source [Matrix](https://matrix.org) client by Christian Kußowski. FluffyChat+ adds
 better space organization (sorting, pinning, reordering), snoozing, read-only chat
-handling, preset themes, Instagram-style reel cards and a home screen chat widget.
+handling, a redesigned look with its own themes, Instagram-style reel cards and a home
+screen chat widget.
 
 Everything else (messaging, encryption, calls, notifications, settings) is FluffyChat,
 unchanged. This fork is not affiliated with or endorsed by the FluffyChat project.
@@ -92,10 +93,15 @@ Please report problems with this fork here, not to FluffyChat.
   read-only too. Switch any chat you're allowed to post in with **Make read-only** /
   **Allow posting** in its ⋮ menu or long-press menu, or **Allow posting** on the note.
   Your choice is saved to your account.
-- **Preset themes:** Settings → Style → **App theme**: AMOLED Black, Nord, Dracula,
-  Catppuccin, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Everforest and One Dark.
-  Each has a light and a dark variant except AMOLED Black, which is dark only and
-  keeps your accent color. Picking an accent color switches back to Default.
+- **Redesign ("Mono"):** pure black by default, with big bold titles, thin dividers and
+  color only where something needs attention: unread chats, mentions and your own
+  messages. Chats you've read fade to gray. Spaces fade to gray in the rail except the
+  open one, which gets an accent bar and a ring. Your profile and settings button sits at
+  the bottom of the spaces rail. Text uses Inter (bundled, SIL Open Font License).
+- **Themes:** Settings → Style → **App theme**: Mono (default), Midnight, AMOLED,
+  Graphite, Nord, Mocha, Forest, Paper and Sand. Each theme sets its own bubble, link and
+  badge colors, and every text color is checked against what it sits on (at least 4.5:1
+  contrast). **Material You** uses your chosen chat color instead.
 
 ### Instagram reels
 
@@ -168,7 +174,10 @@ New files:
 - `lib/utils/room_plus_extension.dart`: read-only and Discord detection, mark all read
 - `lib/widgets/snooze_dialog.dart`: the snooze picker
 - `lib/pages/chat/read_only_composer_note.dart`: the note that replaces the message box
-- `lib/config/theme_presets.dart`: the preset themes
+- `lib/config/theme_presets.dart`, `lib/config/plus_colors.dart`: themes and design colors
+- `lib/pages/chat_list/navigation_rail.dart`, `navi_rail_item.dart`: redesigned rail
+- `lib/widgets/plus_circle_button.dart`, `plus_tab.dart`: redesign building blocks
+- `assets/fonts/`: Inter
 - `lib/utils/home_widget_sync.dart`: sends chats and messages to the home screen widgets
 - `lib/utils/instagram_reel.dart`, `lib/pages/reels/reel_bubble.dart`: reel cards
 - `lib/utils/chat_nickname_extension.dart`, `lib/widgets/rename_for_me_dialog.dart`: personal chat names

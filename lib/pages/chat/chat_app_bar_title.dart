@@ -3,12 +3,14 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/chat.dart';
 import 'package:fluffychat/utils/chat_nickname_extension.dart';
 import 'package:fluffychat/utils/date_time_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
+import 'package:fluffychat/utils/room_plus_extension.dart';
 import 'package:fluffychat/utils/sync_status_localization.dart';
 import 'package:fluffychat/utils/verified_room_extension.dart';
 import 'package:fluffychat/widgets/avatar.dart';
@@ -24,6 +26,7 @@ class ChatAppBarTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = controller.room;
+    final plus = PlusColors.of(context);
     if (controller.selectedEvents.isNotEmpty) {
       return Text(
         controller.selectedEvents.length.toString(),
@@ -50,7 +53,7 @@ class ChatAppBarTitle extends StatelessWidget {
               name: room.getNicknameOrDisplayname(
                 MatrixLocals(L10n.of(context)),
               ),
-              size: 32,
+              size: 38,
             ),
           ),
           const SizedBox(width: 12),
@@ -75,7 +78,11 @@ class ChatAppBarTitle extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16),
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: plus.text,
+                        ),
                       ),
                     ),
                   ],
@@ -91,7 +98,12 @@ class ChatAppBarTitle extends StatelessWidget {
                         (room.client.onSync.value != null &&
                             status.status != SyncStatus.error &&
                             room.client.prevBatch != null);
-                    final style = TextStyle(fontSize: 11);
+                    final style = TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                      color: plus.textFaint,
+                    );
                     return AnimatedSize(
                       duration: FluffyThemes.animationDuration,
                       child: hide
@@ -128,14 +140,19 @@ class ChatAppBarTitle extends StatelessWidget {
                                       if (room.summary.mJoinedMemberCount !=
                                           null)
                                         Text(
-                                          L10n.of(context).countParticipants(
-                                            (room.summary.mJoinedMemberCount ??
-                                                    1) +
-                                                (room
-                                                        .summary
-                                                        .mInvitedMemberCount ??
-                                                    0),
-                                          ),
+                                          [
+                                            ?room.bridgeNetworkName,
+                                            L10n.of(context).countParticipants(
+                                              (room
+                                                          .summary
+                                                          .mJoinedMemberCount ??
+                                                      1) +
+                                                  (room
+                                                          .summary
+                                                          .mInvitedMemberCount ??
+                                                      0),
+                                            ),
+                                          ].join(' · ').toUpperCase(),
                                           maxLines: 1,
                                           style: style,
                                         ),

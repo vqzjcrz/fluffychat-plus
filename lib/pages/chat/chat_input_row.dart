@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:emoji_picker_flutter/locales/default_emoji_set_locale.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/recording_input_row.dart';
@@ -367,8 +368,10 @@ class ChatInputRow extends StatelessWidget {
                               onLongPress: () => recordingViewModel
                                   .startRecording(controller.room),
                               style: IconButton.styleFrom(
-                                backgroundColor: theme.bubbleColor,
-                                foregroundColor: theme.onBubbleColor,
+                                backgroundColor: PlusColors.of(context).accent,
+                                foregroundColor: PlusColors.of(
+                                  context,
+                                ).onAccent,
                               ),
                               icon: Icon(
                                 hovered ? Icons.mic : Icons.mic_none_outlined,
@@ -385,8 +388,12 @@ class ChatInputRow extends StatelessWidget {
                                 key: Key('send_button'),
                                 onPressed: controller.send,
                                 style: IconButton.styleFrom(
-                                  backgroundColor: theme.bubbleColor,
-                                  foregroundColor: theme.onBubbleColor,
+                                  backgroundColor: PlusColors.of(
+                                    context,
+                                  ).accent,
+                                  foregroundColor: PlusColors.of(
+                                    context,
+                                  ).onAccent,
                                 ),
                                 icon: const Icon(Icons.send_outlined),
                               ),

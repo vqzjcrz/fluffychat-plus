@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/chat.dart';
 import 'package:fluffychat/utils/room_plus_extension.dart';
@@ -54,6 +55,19 @@ class ChatSettingsPopupMenuState extends State<ChatSettingsPopupMenu> {
         const SizedBox.shrink(),
         PopupMenuButton<ChatPopupMenuActions>(
           useRootNavigator: true,
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: PlusColors.of(context).line),
+            ),
+            child: Icon(
+              Icons.more_horiz,
+              size: 19,
+              color: PlusColors.of(context).text,
+            ),
+          ),
           onSelected: (choice) async {
             switch (choice) {
               case ChatPopupMenuActions.leave:

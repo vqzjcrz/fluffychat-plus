@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/pages/image_viewer/image_viewer.dart';
 import 'package:fluffychat/utils/instagram_reel.dart';
@@ -38,10 +38,14 @@ class ReelBubble extends StatelessWidget {
         ) ??
         fallbackBlurHash;
     const shadow = [Shadow(blurRadius: 6, color: Color(0x99000000))];
+    final plus = PlusColors.of(context);
 
     return Material(
       color: Colors.black,
-      borderRadius: BorderRadius.circular(AppConfig.borderRadius),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: plus.line),
+      ),
       clipBehavior: Clip.hardEdge,
       child: InkWell(
         // Opens in the normal media viewer, like any other video.
@@ -134,23 +138,45 @@ class ReelBubble extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(
-                      Icons.movie_outlined,
-                      color: Colors.white,
-                      size: 18,
-                      shadows: shadow,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: plus.accent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'REEL',
+                        style: TextStyle(
+                          color: plus.onAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          height: 1,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
               Center(
-                child: Icon(
-                  PlatformInfos.supportsVideoPlayer
-                      ? Icons.play_arrow_rounded
-                      : Icons.file_download_outlined,
-                  color: Colors.white,
-                  size: 56,
-                  shadows: const [Shadow(blurRadius: 16)],
+                child: Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0x33000000),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Icon(
+                    PlatformInfos.supportsVideoPlayer
+                        ? Icons.play_arrow_rounded
+                        : Icons.file_download_outlined,
+                    color: Colors.white,
+                    size: 30,
+                  ),
                 ),
               ),
               if (caption.isNotEmpty || reel?.source != null)

@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/config/theme_presets.dart';
 import 'package:flutter/services.dart';
@@ -47,7 +48,7 @@ abstract class FluffyThemes {
     Color? seed,
   ]) {
     final seedColor = seed ?? Color(AppSettings.colorSchemeSeedInt.value);
-    final preset = ThemePreset.byId(AppSettings.themePreset.value);
+    final preset = ThemePreset.resolve(AppSettings.themePreset.value);
     if (preset != null) brightness = preset.effectiveBrightness(brightness);
     final colorScheme =
         preset?.colorScheme(brightness, seedColor) ??
@@ -56,16 +57,46 @@ abstract class FluffyThemes {
           seedColor: seedColor,
           dynamicSchemeVariant: DynamicSchemeVariant.rainbow,
         );
+    final plus = preset?.colors ?? PlusColors.fromScheme(colorScheme);
     final isColumnMode = FluffyThemes.isColumnMode(context);
-    final dividerColor = brightness == Brightness.dark
-        ? colorScheme.surfaceContainerHighest
-        : colorScheme.surfaceContainer;
+    final dividerColor = plus.line;
     return ThemeData(
       visualDensity: VisualDensity.standard,
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
+      fontFamily: 'Inter',
+      extensions: [plus],
+      scaffoldBackgroundColor: colorScheme.surface,
       dividerColor: dividerColor,
+      dividerTheme: DividerThemeData(color: dividerColor, thickness: 1),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: plus.accent,
+        foregroundColor: plus.onAccent,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        shape: const CircleBorder(),
+        extendedTextStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      listTileTheme: ListTileThemeData(iconColor: plus.textMuted),
+      popupMenuTheme: PopupMenuThemeData(
+        color: plus.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: plus.line),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: plus.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: plus.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
           iconColor: colorScheme.onSurface,
@@ -92,8 +123,9 @@ abstract class FluffyThemes {
       ),
       appBarTheme: AppBarTheme(
         toolbarHeight: isColumnMode ? 72 : 56,
-        surfaceTintColor: isColumnMode ? colorScheme.surface : null,
-        backgroundColor: isColumnMode ? colorScheme.surface : null,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: colorScheme.surface,
+        scrolledUnderElevation: 0,
         actionsPadding: isColumnMode
             ? const EdgeInsets.symmetric(horizontal: 16.0)
             : null,
@@ -145,13 +177,12 @@ extension on Brightness {
 }
 
 extension BubbleColorTheme on ThemeData {
-  Color get bubbleColor => brightness == Brightness.light
-      ? colorScheme.primary
-      : colorScheme.primaryContainer;
+  Color get bubbleColor =>
+      (extension<PlusColors>() ?? PlusColors.fromScheme(colorScheme)).ownBubble;
 
-  Color get onBubbleColor => brightness == Brightness.light
-      ? colorScheme.onPrimary
-      : colorScheme.onPrimaryContainer;
+  Color get onBubbleColor =>
+      (extension<PlusColors>() ?? PlusColors.fromScheme(colorScheme))
+          .onOwnBubble;
 
   Color get secondaryBubbleColor => HSLColor.fromColor(
     brightness == Brightness.light

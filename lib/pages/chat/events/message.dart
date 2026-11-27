@@ -7,7 +7,9 @@ import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
+import 'package:fluffychat/config/theme_presets.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/adaptive_bottom_sheet.dart';
@@ -108,7 +110,11 @@ class Message extends StatelessWidget {
     final ownMessage = event.senderId == client.userID;
     final alignment = ownMessage ? Alignment.topRight : Alignment.topLeft;
 
-    var color = theme.colorScheme.surfaceContainerHigh;
+    final plus = PlusColors.of(context);
+    // Theme presets use solid bubbles; Material You keeps its gradient.
+    final solidBubbles =
+        ThemePreset.resolve(AppSettings.themePreset.value) != null;
+    var color = plus.bubbleIn;
     final displayTime =
         event.type == EventTypes.RoomCreate ||
         previousEvent == null ||
@@ -129,23 +135,17 @@ class Message extends StatelessWidget {
         previousEvent!.senderId == event.senderId &&
         previousEvent!.originServerTs.sameEnvironment(event.originServerTs);
 
-    final textColor = ownMessage
-        ? theme.onBubbleColor
-        : theme.colorScheme.onSurface;
+    final textColor = ownMessage ? theme.onBubbleColor : plus.text;
 
-    final linkColor = ownMessage
-        ? theme.brightness == Brightness.light
-              ? theme.colorScheme.primaryFixed
-              : theme.colorScheme.onTertiaryContainer
-        : theme.colorScheme.primary;
+    final linkColor = ownMessage ? plus.ownLink : plus.accent;
 
     final rowMainAxisAlignment = ownMessage
         ? MainAxisAlignment.end
         : MainAxisAlignment.start;
 
     final displayEvent = event.getDisplayEvent(timeline);
-    const hardCorner = Radius.circular(3);
-    const roundedCorner = Radius.circular(AppConfig.borderRadius);
+    const hardCorner = Radius.circular(5);
+    const roundedCorner = Radius.circular(16);
     final borderRadius = BorderRadius.only(
       topLeft: !ownMessage ? hardCorner : roundedCorner,
       topRight: ownMessage && nextEventSameSender ? hardCorner : roundedCorner,
@@ -353,11 +353,18 @@ class Message extends StatelessWidget {
                                             maxWidth: 200,
                                           ),
                                           child: Text(
-                                            displayname,
+                                            solidBubbles
+                                                ? displayname.toUpperCase()
+                                                : displayname,
                                             style: TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: solidBubbles
+                                                  ? 0.8
+                                                  : null,
                                               color: event.room.isDirectChat
                                                   ? Colors.transparent
+                                                  : solidBubbles
+                                                  ? plus.textMuted
                                                   : (theme.brightness ==
                                                             Brightness.light
                                                         ? displayname
@@ -441,6 +448,12 @@ class Message extends StatelessWidget {
                                           ? Colors.transparent
                                           : color,
                                       borderRadius: borderRadius,
+                                      border:
+                                          !ownMessage &&
+                                              !noBubble &&
+                                              plus.outlineBubbles
+                                          ? Border.all(color: plus.line)
+                                          : null,
                                     ),
                                     clipBehavior: Clip.antiAlias,
                                     child: BubbleBackground(
@@ -448,6 +461,7 @@ class Message extends StatelessWidget {
                                       ignore:
                                           noBubble ||
                                           !ownMessage ||
+                                          solidBubbles ||
                                           MediaQuery.highContrastOf(context),
                                       scrollController: scrollController,
                                       child: Container(

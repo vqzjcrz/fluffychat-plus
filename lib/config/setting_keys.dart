@@ -57,7 +57,7 @@ enum AppSettings<T> {
   // colorSchemeSeed stored as ARGB int
   colorSchemeSeedInt<int>('chat.fluffy.color_scheme_seed', 0xFF5625BA),
   // FluffyChat+ preset theme id, empty for the default seed-based theme
-  themePreset<String>('im.fluffychat.plus.theme_preset', ''),
+  themePreset<String>('im.fluffychat.plus.theme_preset', 'mono'),
   // FluffyChat+ space the app opens on: the favorite if set, else the last one
   favoriteSpace<String>('im.fluffychat.plus.favorite_space', ''),
   lastSpace<String>('im.fluffychat.plus.last_space', ''),

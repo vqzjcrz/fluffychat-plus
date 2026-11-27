@@ -98,7 +98,7 @@ class SettingsStyleView extends StatelessWidget {
                     runSpacing: 12,
                     children: [
                       _ThemePresetSwatch(
-                        name: L10n.of(context).defaultTheme,
+                        name: L10n.of(context).materialYouTheme,
                         palette: ThemePalette(
                           background: defaultScheme.surface,
                           foreground: defaultScheme.onSurface,
@@ -107,7 +107,7 @@ class SettingsStyleView extends StatelessWidget {
                           tertiary: defaultScheme.tertiary,
                           error: defaultScheme.error,
                         ),
-                        selected: ThemePreset.byId(
+                        selected: ThemePreset.resolve(
                               controller.currentPreset,
                             ) ==
                             null,
@@ -117,7 +117,9 @@ class SettingsStyleView extends StatelessWidget {
                         _ThemePresetSwatch(
                           name: preset.name,
                           palette: preset.previewPalette(brightness, seed),
-                          selected: controller.currentPreset == preset.id,
+                          selected:
+                              ThemePreset.resolve(controller.currentPreset) ==
+                              preset,
                           onTap: () => controller.setThemePreset(preset.id),
                         ),
                     ],

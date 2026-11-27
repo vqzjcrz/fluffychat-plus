@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
@@ -14,10 +15,14 @@ class StartChatFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final plus = PlusColors.of(context);
     return FloatingActionButton.extended(
       heroTag: 'start_chat_fab',
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      backgroundColor: plus.accent,
+      foregroundColor: plus.onAccent,
+      elevation: 0,
+      highlightElevation: 0,
+      shape: extended ? const StadiumBorder() : const CircleBorder(),
       onPressed: () => context.go('/rooms/newprivatechat'),
       extendedIconLabelSpacing: extended ? 10 : 0,
       extendedPadding: extended
@@ -29,7 +34,7 @@ class StartChatFab extends StatelessWidget {
         curve: FluffyThemes.animationCurve,
         child: extended ? Text(L10n.of(context).newChat) : SizedBox.shrink(),
       ),
-      icon: const Icon(Icons.edit_square),
+      icon: const Icon(Icons.edit_outlined),
     );
   }
 }

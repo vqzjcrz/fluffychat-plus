@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/active_call_indicator.dart';
@@ -33,6 +34,8 @@ import 'package:fluffychat/widgets/chat_selection_bar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/hover_builder.dart';
 import 'package:fluffychat/widgets/matrix.dart';
+import 'package:fluffychat/widgets/plus_circle_button.dart';
+import 'package:fluffychat/widgets/plus_tab.dart';
 import 'package:fluffychat/widgets/rename_for_me_dialog.dart';
 import 'package:fluffychat/widgets/snooze_dialog.dart';
 import 'package:fluffychat/widgets/space_accent_theme.dart';
@@ -132,6 +135,9 @@ class _SpaceViewState extends State<SpaceView> {
   bool _isLoading = false;
   bool _reorderMode = false;
   bool _mutedExpanded = false;
+
+  /// The filter field replaces the title while it's open.
+  bool _searchOpen = false;
 
   /// Chats picked for a bulk action; selection mode is on while not empty.
   final Set<String> _selectedRoomIds = {};
@@ -841,33 +847,32 @@ class _SpaceViewState extends State<SpaceView> {
   }
 
   Widget _buildSectionHeader(BuildContext context, _SectionHeader header) {
-    final theme = Theme.of(context);
+    final plus = PlusColors.of(context);
     final expanded = header.expanded;
-    final color = theme.colorScheme.onSurfaceVariant;
+    final color = plus.textFaint;
     return InkWell(
       onTap: header.onTap,
       onLongPress: header.onMenu,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 12, header.onMenu == null ? 16 : 4, 4),
+        padding: EdgeInsets.fromLTRB(18, 18, header.onMenu == null ? 16 : 4, 6),
         child: Row(
           children: [
-            Icon(header.icon, size: 14, color: color),
-            const SizedBox(width: 8),
+            Icon(
+              expanded == null
+                  ? header.icon
+                  : expanded
+                  ? Icons.keyboard_arrow_down
+                  : Icons.keyboard_arrow_right,
+              size: 15,
+              color: color,
+            ),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
-                header.label,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+                header.label.toUpperCase(),
+                style: PlusText.kicker(color),
               ),
             ),
-            if (expanded != null)
-              Icon(
-                expanded ? Icons.expand_less : Icons.expand_more,
-                size: 18,
-                color: color,
-              ),
             if (header.onMenu != null)
               IconButton(
                 icon: const Icon(Icons.more_horiz),
@@ -1050,19 +1055,22 @@ class _SpaceViewState extends State<SpaceView> {
     required String label,
     required bool alignStart,
   }) {
-    final theme = Theme.of(context);
+    final plus = PlusColors.of(context);
     return Container(
-      color: theme.colorScheme.tertiaryContainer,
+      color: plus.accent,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       alignment: alignStart ? Alignment.centerLeft : Alignment.centerRight,
       child: Row(
         mainAxisSize: .min,
         children: [
-          Icon(icon, color: theme.colorScheme.onTertiaryContainer),
+          Icon(icon, color: plus.onAccent),
           const SizedBox(width: 8),
           Text(
             label,
-            style: TextStyle(color: theme.colorScheme.onTertiaryContainer),
+            style: TextStyle(
+              color: plus.onAccent,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -1105,38 +1113,39 @@ class _SpaceViewState extends State<SpaceView> {
         ? null
         : _lastMessagePreview(context, previewRoom);
 
+    final plus = PlusColors.of(context);
     final selected = _selectedRoomIds.contains(item.roomId);
+    final emphasized = (isUnread && !isMuted) || hasMentions;
+    // Discord channels show as "# name" (or a lock when read-only), like on
+    // Discord; other chats keep their avatar and a preview line.
+    final channelStyle =
+        joinedRoom != null && !joinedRoom.isSpace && joinedRoom.isDiscordBridged;
     final Color backgroundColor;
-    if (selected) {
-      backgroundColor = theme.colorScheme.tertiaryContainer;
-    } else if (isActive) {
-      backgroundColor = theme.colorScheme.secondaryContainer;
-    } else if (hasMentions) {
-      backgroundColor = theme.colorScheme.primary.withAlpha(84);
-    } else if (isUnread && !isMuted) {
-      backgroundColor = theme.colorScheme.primary.withAlpha(40);
+    if (selected || isActive) {
+      backgroundColor = plus.raised;
+    } else if (emphasized) {
+      backgroundColor = plus.surface;
     } else {
       backgroundColor = Colors.transparent;
     }
 
     Widget tile = Material(
-      borderRadius: BorderRadius.circular(AppConfig.borderRadius),
+      borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.hardEdge,
       color: backgroundColor,
       child: Container(
         decoration: hasMentions && !isActive
             ? BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: theme.colorScheme.primary, width: 4),
-                ),
+                border: Border(left: BorderSide(color: plus.danger, width: 3)),
               )
             : null,
         child: HoverBuilder(
           builder: (context, hovered) => ListTile(
-            visualDensity: const VisualDensity(vertical: -0.5),
+            visualDensity: VisualDensity(vertical: channelStyle ? -2 : -0.5),
+            horizontalTitleGap: channelStyle ? 10 : 12,
             contentPadding: EdgeInsets.only(
-              left: hasMentions && !isActive ? 4 : 8,
-              right: joinedRoom == null ? 0 : 8,
+              left: hasMentions && !isActive ? 7 : 10,
+              right: joinedRoom == null ? 0 : 10,
             ),
             onTap: reorder || joinedRoom == null
                 ? null
@@ -1153,14 +1162,10 @@ class _SpaceViewState extends State<SpaceView> {
                     dimension: avatarSize,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.tertiary,
+                        color: plus.accent,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        Icons.check,
-                        size: 18,
-                        color: theme.colorScheme.onTertiary,
-                      ),
+                      child: Icon(Icons.check, size: 18, color: plus.onAccent),
                     ),
                   )
                 : hovered && !reorder && (isAdmin || joinedRoom != null)
@@ -1176,6 +1181,15 @@ class _SpaceViewState extends State<SpaceView> {
                       onPressed: () =>
                           _showSpaceChildEditMenu(context, item.roomId),
                       icon: const Icon(Icons.edit_outlined),
+                    ),
+                  )
+                : channelStyle
+                ? SizedBox(
+                    width: 24,
+                    child: Icon(
+                      readOnly ? Icons.lock_outline : Icons.tag,
+                      size: 20,
+                      color: emphasized ? plus.text : plus.textFaint,
                     ),
                   )
                 : Avatar(
@@ -1212,33 +1226,48 @@ class _SpaceViewState extends State<SpaceView> {
                   child: Opacity(
                     opacity: joinedRoom == null ? 0.5 : 1,
                     child: Text(
-                      displayname,
+                      channelStyle && displayname.startsWith('#')
+                          ? displayname.substring(1)
+                          : displayname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: (isUnread && !isMuted) || hasMentions
-                          ? const TextStyle(fontWeight: FontWeight.bold)
-                          : null,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: emphasized
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: emphasized ? plus.text : plus.textFaint,
+                      ),
                     ),
                   ),
                 ),
-                if (readOnly)
+                if (readOnly && !channelStyle)
                   Tooltip(
                     message: l10n.readOnlyChat,
-                    child: const Padding(
-                      padding: EdgeInsets.only(left: 4.0),
-                      child: Icon(Icons.lock_outline, size: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4.0),
+                      child: Icon(
+                        Icons.lock_outline,
+                        size: 14,
+                        color: plus.textFaint,
+                      ),
                     ),
                   ),
                 if (snoozed)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4.0),
-                    child: Icon(Icons.snooze, size: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: Icon(Icons.snooze, size: 14, color: plus.textFaint),
                   )
                 else if (isMuted)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4.0),
-                    child: Icon(Icons.notifications_off_outlined, size: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: Icon(
+                      Icons.notifications_off_outlined,
+                      size: 14,
+                      color: plus.textFaint,
+                    ),
                   ),
+                const SizedBox(width: 6),
                 if (isPinned && reorder)
                   const Padding(
                     padding: EdgeInsets.only(left: 4.0),
@@ -1261,7 +1290,7 @@ class _SpaceViewState extends State<SpaceView> {
                   ),
               ],
             ),
-            subtitle: previewRoom != null
+            subtitle: previewRoom != null && !channelStyle
                 ? Row(
                     children: [
                       Expanded(
@@ -1272,7 +1301,7 @@ class _SpaceViewState extends State<SpaceView> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13,
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: emphasized ? plus.textMuted : plus.textFaint,
                             decoration: previewRoom.lastEvent?.redacted == true
                                 ? TextDecoration.lineThrough
                                 : null,
@@ -1289,12 +1318,8 @@ class _SpaceViewState extends State<SpaceView> {
                             ),
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: hasMentions || isUnread
-                                  ? FontWeight.bold
-                                  : null,
-                              color: hasMentions
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                              color: plus.textFaint,
                             ),
                           ),
                         ),
@@ -1308,7 +1333,7 @@ class _SpaceViewState extends State<SpaceView> {
 
     if (memberRoom != null && !reorder && !_selectMode) {
       tile = ClipRRect(
-        borderRadius: BorderRadius.circular(AppConfig.borderRadius),
+        borderRadius: BorderRadius.circular(12),
         child: Dismissible(
           key: ValueKey('swipe_${item.roomId}'),
           direction: DismissDirection.horizontal,
@@ -1373,6 +1398,7 @@ class _SpaceViewState extends State<SpaceView> {
 
   Widget _buildView(BuildContext context) {
     final theme = Theme.of(context);
+    final plus = PlusColors.of(context);
     final l10n = L10n.of(context);
 
     final room = Matrix.of(context).client.getRoomById(widget.spaceId);
@@ -1511,70 +1537,22 @@ class _SpaceViewState extends State<SpaceView> {
                     .whereType<Room>()
                     .toList();
 
-                return CustomScrollView(
-                  slivers: [
-                    SliverAppBar(
-                      toolbarHeight: 72,
-                      floating: true,
-                      scrolledUnderElevation: 0,
-                      backgroundColor: _selectMode
-                          ? theme.colorScheme.surface
-                          : Colors.transparent,
-                      automaticallyImplyLeading: false,
-                      pinned: _selectMode,
-                      title: _selectMode
-                          ? ChatSelectionBar(
-                              rooms: selectedRooms,
-                              currentSpace: room,
-                              onCategory: () =>
-                                  _pickCategoryFor(_selectedRoomIds.toList()),
-                              onClose: _clearSelection,
-                              onSelectAll: () => setState(
-                                () => _selectedRoomIds.addAll(_visibleRoomIds),
-                              ),
-                              onDone: _clearSelection,
-                            )
-                          : TextField(
-                        controller: _filterController,
-                        onChanged: (_) => setState(() {}),
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: theme.colorScheme.secondaryContainer,
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide.none,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          contentPadding: EdgeInsets.zero,
-                          hintText: l10n.search,
-                          hintStyle: TextStyle(
-                            color: theme.colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.normal,
-                          ),
-                          floatingLabelBehavior: FloatingLabelBehavior.never,
-                          prefixIcon: IconButton(
-                            onPressed: () {},
-                            icon: Icon(
-                              Icons.search_outlined,
-                              color: theme.colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                          suffixIcon: PopupMenuButton<SpaceActions>(
-                            icon: Avatar(
-                              size: avatarSize,
-                              mxContent: room.avatar,
-                              name: displayname,
-                              shapeBorder: RoundedSuperellipseBorder(
-                                side: BorderSide(
-                                  width: 1,
-                                  color: theme.dividerColor,
+                final spaceMenu = PopupMenuButton<SpaceActions>(
+                            tooltip: l10n.moreOptions,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: plus.line),
                                 ),
-                                borderRadius: BorderRadius.circular(
-                                  AppConfig.spaceBorderRadius,
+                                child: Icon(
+                                  Icons.more_horiz,
+                                  size: 19,
+                                  color: plus.text,
                                 ),
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                AppConfig.spaceBorderRadius,
                               ),
                             ),
                             useRootNavigator: true,
@@ -1714,9 +1692,149 @@ class _SpaceViewState extends State<SpaceView> {
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                      ),
+                          );
+                return CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      toolbarHeight: _selectMode || _searchOpen ? 72 : 92,
+                      titleSpacing: 18,
+                      floating: true,
+                      scrolledUnderElevation: 0,
+                      backgroundColor: plus.background,
+                      automaticallyImplyLeading: false,
+                      pinned: _selectMode,
+                      title: _selectMode
+                          ? ChatSelectionBar(
+                              rooms: selectedRooms,
+                              currentSpace: room,
+                              onCategory: () =>
+                                  _pickCategoryFor(_selectedRoomIds.toList()),
+                              onClose: _clearSelection,
+                              onSelectAll: () => setState(
+                                () => _selectedRoomIds.addAll(_visibleRoomIds),
+                              ),
+                              onDone: _clearSelection,
+                            )
+                          : _searchOpen
+                          ? TextField(
+                              controller: _filterController,
+                              autofocus: true,
+                              onChanged: (_) => setState(() {}),
+                              textInputAction: TextInputAction.search,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: plus.surface,
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: plus.line),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: plus.textFaint,
+                                  ),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                                hintText: l10n.search,
+                                hintStyle: TextStyle(
+                                  color: plus.textFaint,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                prefixIcon: IconButton(
+                                  tooltip: l10n.cancel,
+                                  onPressed: () => setState(() {
+                                    _searchOpen = false;
+                                    _filterController.clear();
+                                  }),
+                                  icon: Icon(
+                                    Icons.close_outlined,
+                                    color: plus.text,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: .start,
+                              mainAxisSize: .min,
+                              children: [
+                                Text(
+                                  [
+                                    ?room.bridgeNetworkName,
+                                    l10n.countParticipants(
+                                      room.summary.mJoinedMemberCount ?? 0,
+                                    ),
+                                  ].join(' · ').toUpperCase(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: PlusText.kicker(plus.textFaint),
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        displayname,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontFamily: PlusText.displayFamily,
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.9,
+                                          height: 1.15,
+                                          color: plus.text,
+                                        ),
+                                      ),
+                                    ),
+                                    PlusCircleButton(
+                                      icon: Icons.search,
+                                      tooltip: l10n.search,
+                                      onPressed: () =>
+                                          setState(() => _searchOpen = true),
+                                    ),
+                                    spaceMenu,
+                                  ],
+                                ),
+                              ],
+                            ),
+                      bottom: _selectMode || _searchOpen
+                          ? null
+                          : PreferredSize(
+                              preferredSize: const Size.fromHeight(38),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(color: plus.line),
+                                  ),
+                                ),
+                                child: SizedBox(
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 10),
+                                      PlusTab(
+                                        label: l10n.chats,
+                                        selected: true,
+                                        onTap: () {},
+                                      ),
+                                      PlusTab(
+                                        label: l10n.spaceMedia,
+                                        selected: false,
+                                        onTap: () =>
+                                            _onSpaceAction(SpaceActions.media),
+                                      ),
+                                      PlusTab(
+                                        label: l10n.spaceMembers,
+                                        selected: false,
+                                        onTap: () => context.push(
+                                          '/rooms/${widget.spaceId}/details/members',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                     if (_reorderMode) ...[
                       SliverToBoxAdapter(

@@ -3,10 +3,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/pages/chat_list/chat_list.dart';
+import 'package:fluffychat/pages/chat_list/client_chooser_button.dart';
 import 'package:fluffychat/pages/chat_list/navigation_rail.dart';
 import 'package:fluffychat/pages/chat_list/start_chat_fab.dart';
 import 'package:material_ui/material_ui.dart';
@@ -20,8 +21,9 @@ class ChatListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final oneColumnSpacesMode =
-        !FluffyThemes.isColumnMode(context) &&
+    final plus = PlusColors.of(context);
+    final showRail =
+        FluffyThemes.isColumnMode(context) ||
         AppSettings.displayNavigationRail.value;
     return PopScope(
       canPop:
@@ -46,17 +48,19 @@ class ChatListView extends StatelessWidget {
       child: Row(
         children: [
           Material(
-            color: Theme.of(context).colorScheme.surface,
+            color: plus.background,
             child: AnimatedSize(
               duration: FluffyThemes.animationDuration,
               curve: FluffyThemes.animationCurve,
-              child:
-                  (FluffyThemes.isColumnMode(context) ||
-                      AppSettings.displayNavigationRail.value)
+              child: showRail
                   ? SpacesNavigationRail(
                       activeSpaceId: controller.activeSpaceId,
                       onGoToChats: controller.clearActiveSpace,
                       onGoToSpaceId: controller.setActiveSpace,
+                      accountButton: ClientChooserButton(
+                        controller,
+                        railStyle: true,
+                      ),
                     )
                   : SizedBox(
                       width: 0,
@@ -64,10 +68,7 @@ class ChatListView extends StatelessWidget {
                     ),
             ),
           ),
-          if (FluffyThemes.isColumnMode(context) ||
-              AppSettings.displayNavigationRail.value)
-            if (FluffyThemes.isColumnMode(context))
-              Container(width: 1, color: Theme.of(context).dividerColor),
+          if (showRail) Container(width: 1, color: plus.line),
 
           Expanded(
             child: GestureDetector(
@@ -75,26 +76,13 @@ class ChatListView extends StatelessWidget {
               excludeFromSemantics: true,
               behavior: HitTestBehavior.translucent,
               child: Scaffold(
-                backgroundColor: oneColumnSpacesMode
-                    ? Theme.of(context).colorScheme.surfaceContainer
-                    : null,
+                backgroundColor: plus.background,
                 body: SafeArea(
-                  top: oneColumnSpacesMode,
                   bottom: false,
                   left: false,
                   right: false,
                   child: Material(
-                    clipBehavior: oneColumnSpacesMode
-                        ? Clip.hardEdge
-                        : Clip.none,
-                    borderRadius: oneColumnSpacesMode
-                        ? BorderRadius.only(
-                            topLeft: Radius.circular(AppConfig.borderRadius),
-                          )
-                        : null,
-                    color: oneColumnSpacesMode
-                        ? Theme.of(context).colorScheme.surface
-                        : null,
+                    color: plus.background,
                     child: ChatListViewBody(controller),
                   ),
                 ),

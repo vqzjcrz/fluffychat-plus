@@ -3,13 +3,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'dart:math';
-
 import 'package:collection/collection.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// The colors a preset theme is built from. Everything else in the color
-/// scheme is derived from these.
+/// The colors shown on a theme's swatch in the settings.
 class ThemePalette {
   final Color background;
   final Color foreground;
@@ -26,319 +24,293 @@ class ThemePalette {
     required this.tertiary,
     required this.error,
   });
-
-  ColorScheme toColorScheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
-    Color container(Color color) => mix(background, color, isDark ? 0.3 : 0.2);
-    Color onAccent(Color color) =>
-        _contrast(color, background) >= _contrast(color, foreground)
-        ? background
-        : foreground;
-    final strongError = isDark
-        ? mix(error, Colors.white, 0.25)
-        : mix(error, Colors.black, 0.25);
-
-    return ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: brightness,
-    ).copyWith(
-      primary: primary,
-      onPrimary: onAccent(primary),
-      primaryContainer: container(primary),
-      onPrimaryContainer: foreground,
-      secondary: secondary,
-      onSecondary: onAccent(secondary),
-      secondaryContainer: container(secondary),
-      onSecondaryContainer: foreground,
-      tertiary: tertiary,
-      onTertiary: onAccent(tertiary),
-      tertiaryContainer: container(tertiary),
-      onTertiaryContainer: foreground,
-      error: error,
-      onError: onAccent(error),
-      errorContainer: container(error),
-      onErrorContainer: strongError,
-      surface: background,
-      onSurface: foreground,
-      surfaceDim: mix(background, Colors.black, isDark ? 0.2 : 0.06),
-      surfaceBright: mix(background, foreground, isDark ? 0.16 : 0.0),
-      surfaceContainerLowest: isDark
-          ? mix(background, Colors.black, 0.25)
-          : mix(background, Colors.white, 0.6),
-      surfaceContainerLow: mix(background, foreground, 0.03),
-      surfaceContainer: mix(background, foreground, 0.06),
-      surfaceContainerHigh: mix(background, foreground, 0.1),
-      surfaceContainerHighest: mix(background, foreground, 0.14),
-      onSurfaceVariant: mix(foreground, background, 0.25),
-      outline: mix(foreground, background, 0.5),
-      outlineVariant: mix(foreground, background, 0.78),
-      inverseSurface: foreground,
-      onInverseSurface: background,
-      inversePrimary: mix(primary, isDark ? Colors.black : Colors.white, 0.4),
-      surfaceTint: primary,
-    );
-  }
-
-  static double _contrast(Color a, Color b) {
-    final la = a.computeLuminance();
-    final lb = b.computeLuminance();
-    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05);
-  }
 }
 
+/// A FluffyChat+ theme. All of its colors are set by hand and checked
+/// against each other for contrast, chat bubbles included.
 class ThemePreset {
   final String id;
   final String name;
-  final ThemePalette? light;
-  final ThemePalette? dark;
-
-  /// Keeps the user's accent color and only swaps the surfaces to black.
-  final bool amoled;
+  final Brightness brightness;
+  final PlusColors colors;
 
   const ThemePreset({
     required this.id,
     required this.name,
-    this.light,
-    this.dark,
-    this.amoled = false,
+    required this.brightness,
+    required this.colors,
   });
 
-  bool get hasLight => light != null;
-  bool get hasDark => dark != null || amoled;
+  /// Every preset comes in one brightness only and always uses it.
+  Brightness effectiveBrightness(Brightness requested) => brightness;
 
-  /// The brightness this preset shows for [requested]. Presets with only a
-  /// dark (or only a light) variant always use that one.
-  Brightness effectiveBrightness(Brightness requested) {
-    if (requested == Brightness.light && !hasLight) return Brightness.dark;
-    if (requested == Brightness.dark && !hasDark) return Brightness.light;
-    return requested;
+  ColorScheme colorScheme(Brightness requested, Color seed) {
+    final c = colors;
+    final dark = brightness == Brightness.dark;
+    Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
+    return ColorScheme(
+      brightness: brightness,
+      primary: c.accent,
+      onPrimary: c.onAccent,
+      primaryContainer: c.ownBubble,
+      onPrimaryContainer: c.onOwnBubble,
+      primaryFixed: c.ownLink,
+      onPrimaryFixed: c.ownBubble,
+      secondary: c.accent,
+      onSecondary: c.onAccent,
+      secondaryContainer: c.raised,
+      onSecondaryContainer: c.text,
+      tertiary: c.accent,
+      onTertiary: c.onAccent,
+      tertiaryContainer: c.raised,
+      onTertiaryContainer: c.text,
+      error: c.danger,
+      onError: c.onDanger,
+      errorContainer: mix(c.background, c.danger, dark ? 0.22 : 0.14),
+      onErrorContainer: c.text,
+      surface: c.background,
+      onSurface: c.text,
+      surfaceDim: c.background,
+      surfaceBright: c.raised,
+      surfaceContainerLowest: dark ? c.background : Colors.white,
+      surfaceContainerLow: mix(c.background, c.surface, 0.5),
+      surfaceContainer: c.surface,
+      surfaceContainerHigh: c.raised,
+      surfaceContainerHighest: mix(c.raised, c.text, dark ? 0.06 : 0.04),
+      onSurfaceVariant: c.textMuted,
+      outline: c.textFaint,
+      outlineVariant: c.line,
+      inverseSurface: c.text,
+      onInverseSurface: c.background,
+      inversePrimary: c.accent,
+      shadow: Colors.black,
+      scrim: Colors.black,
+      surfaceTint: Colors.transparent,
+    );
   }
 
-  ColorScheme colorScheme(Brightness brightness, Color seed) {
-    final effective = effectiveBrightness(brightness);
-    if (amoled) {
-      return ColorScheme.fromSeed(
-        seedColor: seed,
-        brightness: Brightness.dark,
-        dynamicSchemeVariant: DynamicSchemeVariant.rainbow,
-      ).copyWith(
-        surface: Colors.black,
-        surfaceDim: Colors.black,
-        surfaceBright: const Color(0xFF1E1E1E),
-        surfaceContainerLowest: Colors.black,
-        surfaceContainerLow: const Color(0xFF080808),
-        surfaceContainer: const Color(0xFF101010),
-        surfaceContainerHigh: const Color(0xFF181818),
-        surfaceContainerHighest: const Color(0xFF222222),
+  ThemePalette previewPalette(Brightness requested, Color seed) =>
+      ThemePalette(
+        background: colors.background,
+        foreground: colors.text,
+        primary: colors.accent,
+        secondary: colors.ownBubble,
+        tertiary: colors.bubbleIn,
+        error: colors.danger,
       );
-    }
-    final palette = effective == Brightness.dark ? dark! : light!;
-    return palette.toColorScheme(effective);
-  }
-
-  /// Colors for the preview swatch in the settings.
-  ThemePalette previewPalette(Brightness brightness, Color seed) {
-    if (amoled) {
-      final scheme = colorScheme(Brightness.dark, seed);
-      return ThemePalette(
-        background: Colors.black,
-        foreground: Colors.white,
-        primary: scheme.primary,
-        secondary: scheme.secondary,
-        tertiary: scheme.tertiary,
-        error: scheme.error,
-      );
-    }
-    return effectiveBrightness(brightness) == Brightness.dark ? dark! : light!;
-  }
 
   static ThemePreset? byId(String id) =>
       themePresets.firstWhereOrNull((preset) => preset.id == id);
+
+  /// The preset for a saved setting: none (Material You) for an empty one,
+  /// and Mono for presets that no longer exist.
+  static ThemePreset? resolve(String id) {
+    if (id.isEmpty) return null;
+    return byId(id) ?? byId(monoPresetId);
+  }
 }
 
-const String amoledPresetId = 'amoled';
+const String monoPresetId = 'mono';
 
 const List<ThemePreset> themePresets = [
-  ThemePreset(id: amoledPresetId, name: 'AMOLED Black', amoled: true),
+  ThemePreset(
+    id: monoPresetId,
+    name: 'Mono',
+    brightness: Brightness.dark,
+    colors: PlusColors(
+      background: Color(0xFF000000),
+      surface: Color(0xFF0E0E10),
+      raised: Color(0xFF18181B),
+      bubbleIn: Color(0xFF18181B),
+      line: Color(0xFF1F1F23),
+      text: Color(0xFFFFFFFF),
+      textMuted: Color(0xFFA1A1AA),
+      textFaint: Color(0xFF80808A),
+      accent: Color(0xFFD4FF3F),
+      onAccent: Color(0xFF0A0A0A),
+      ownBubble: Color(0xFFD4FF3F),
+      onOwnBubble: Color(0xFF0A0A0A),
+      ownLink: Color(0xFF2E4A00),
+      danger: Color(0xFFFF5A5F),
+      onDanger: Color(0xFF0A0A0A),
+    ),
+  ),
+  ThemePreset(
+    id: 'midnight',
+    name: 'Midnight',
+    brightness: Brightness.dark,
+    colors: PlusColors(
+      background: Color(0xFF16171A),
+      surface: Color(0xFF1E1F23),
+      raised: Color(0xFF25262B),
+      bubbleIn: Color(0xFF25262B),
+      line: Color(0xFF2C2D32),
+      text: Color(0xFFEDEEF0),
+      textMuted: Color(0xFFA6A9B0),
+      textFaint: Color(0xFF8A8E96),
+      accent: Color(0xFF8F9CFF),
+      onAccent: Color(0xFF0B0B0D),
+      ownBubble: Color(0xFF4553D6),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFDCE0FF),
+      danger: Color(0xFFFF6B70),
+      onDanger: Color(0xFF0B0B0D),
+    ),
+  ),
+  ThemePreset(
+    id: 'amoled',
+    name: 'AMOLED',
+    brightness: Brightness.dark,
+    colors: PlusColors(
+      background: Color(0xFF000000),
+      surface: Color(0xFF0E0E10),
+      raised: Color(0xFF1A1A1D),
+      bubbleIn: Color(0xFF1A1A1D),
+      line: Color(0xFF1F1F23),
+      text: Color(0xFFFFFFFF),
+      textMuted: Color(0xFFA1A1AA),
+      textFaint: Color(0xFF80808A),
+      accent: Color(0xFF8AB4FF),
+      onAccent: Color(0xFF0A0A0A),
+      ownBubble: Color(0xFF2B4FD8),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFD7E3FF),
+      danger: Color(0xFFFF5A5F),
+      onDanger: Color(0xFF0A0A0A),
+    ),
+  ),
+  ThemePreset(
+    id: 'graphite',
+    name: 'Graphite',
+    brightness: Brightness.dark,
+    colors: PlusColors(
+      background: Color(0xFF1C1C1E),
+      surface: Color(0xFF242426),
+      raised: Color(0xFF2C2C2F),
+      bubbleIn: Color(0xFF2C2C2F),
+      line: Color(0xFF343437),
+      text: Color(0xFFF2F2F3),
+      textMuted: Color(0xFFA9A9AF),
+      textFaint: Color(0xFF8E8E94),
+      accent: Color(0xFF64D2B3),
+      onAccent: Color(0xFF0A0A0A),
+      ownBubble: Color(0xFF13695A),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFBFF5E6),
+      danger: Color(0xFFFF7A7A),
+      onDanger: Color(0xFF0A0A0A),
+    ),
+  ),
   ThemePreset(
     id: 'nord',
     name: 'Nord',
-    light: ThemePalette(
-      background: Color(0xFFECEFF4),
-      foreground: Color(0xFF2E3440),
-      primary: Color(0xFF5E81AC),
-      secondary: Color(0xFF81A1C1),
-      tertiary: Color(0xFFB48EAD),
-      error: Color(0xFFBF616A),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF2E3440),
-      foreground: Color(0xFFECEFF4),
-      primary: Color(0xFF88C0D0),
-      secondary: Color(0xFF81A1C1),
-      tertiary: Color(0xFFB48EAD),
-      error: Color(0xFFBF616A),
-    ),
-  ),
-  ThemePreset(
-    id: 'dracula',
-    name: 'Dracula',
-    light: ThemePalette(
-      background: Color(0xFFFFFBEB),
-      foreground: Color(0xFF1F1F1F),
-      primary: Color(0xFF644AC9),
-      secondary: Color(0xFFA3144D),
-      tertiary: Color(0xFF036A96),
-      error: Color(0xFFCB3A2A),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF282A36),
-      foreground: Color(0xFFF8F8F2),
-      primary: Color(0xFFBD93F9),
-      secondary: Color(0xFFFF79C6),
-      tertiary: Color(0xFF8BE9FD),
-      error: Color(0xFFFF5555),
+    brightness: Brightness.dark,
+    colors: PlusColors(
+      background: Color(0xFF242933),
+      surface: Color(0xFF2B313C),
+      raised: Color(0xFF313844),
+      bubbleIn: Color(0xFF313844),
+      line: Color(0xFF3A4150),
+      text: Color(0xFFECEFF4),
+      textMuted: Color(0xFFB4BCCB),
+      textFaint: Color(0xFF98A0AF),
+      accent: Color(0xFF88C0D0),
+      onAccent: Color(0xFF1A1E25),
+      ownBubble: Color(0xFF3D5A80),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFCFE6F0),
+      danger: Color(0xFFF08A92),
+      onDanger: Color(0xFF1A1E25),
     ),
   ),
   ThemePreset(
-    id: 'catppuccin',
-    name: 'Catppuccin',
-    light: ThemePalette(
-      background: Color(0xFFEFF1F5),
-      foreground: Color(0xFF4C4F69),
-      primary: Color(0xFF8839EF),
-      secondary: Color(0xFF1E66F5),
-      tertiary: Color(0xFF179299),
-      error: Color(0xFFD20F39),
-    ),
-    dark: ThemePalette(
+    id: 'mocha',
+    name: 'Mocha',
+    brightness: Brightness.dark,
+    colors: PlusColors(
       background: Color(0xFF1E1E2E),
-      foreground: Color(0xFFCDD6F4),
-      primary: Color(0xFFCBA6F7),
-      secondary: Color(0xFF89B4FA),
-      tertiary: Color(0xFF94E2D5),
-      error: Color(0xFFF38BA8),
+      surface: Color(0xFF252536),
+      raised: Color(0xFF2C2D3F),
+      bubbleIn: Color(0xFF2C2D3F),
+      line: Color(0xFF35364B),
+      text: Color(0xFFCDD6F4),
+      textMuted: Color(0xFFA6ADC8),
+      textFaint: Color(0xFF8E94B0),
+      accent: Color(0xFFCBA6F7),
+      onAccent: Color(0xFF11111B),
+      ownBubble: Color(0xFF5B4A9E),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFE8DBFF),
+      danger: Color(0xFFF38BA8),
+      onDanger: Color(0xFF11111B),
     ),
   ),
   ThemePreset(
-    id: 'gruvbox',
-    name: 'Gruvbox',
-    light: ThemePalette(
-      background: Color(0xFFFBF1C7),
-      foreground: Color(0xFF3C3836),
-      primary: Color(0xFFAF3A03),
-      secondary: Color(0xFF79740E),
-      tertiary: Color(0xFF076678),
-      error: Color(0xFF9D0006),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF282828),
-      foreground: Color(0xFFEBDBB2),
-      primary: Color(0xFFFE8019),
-      secondary: Color(0xFFB8BB26),
-      tertiary: Color(0xFF83A598),
-      error: Color(0xFFFB4934),
-    ),
-  ),
-  ThemePreset(
-    id: 'solarized',
-    name: 'Solarized',
-    light: ThemePalette(
-      background: Color(0xFFFDF6E3),
-      foreground: Color(0xFF586E75),
-      primary: Color(0xFF268BD2),
-      secondary: Color(0xFF2AA198),
-      tertiary: Color(0xFF6C71C4),
-      error: Color(0xFFDC322F),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF002B36),
-      foreground: Color(0xFF93A1A1),
-      primary: Color(0xFF268BD2),
-      secondary: Color(0xFF2AA198),
-      tertiary: Color(0xFFD33682),
-      error: Color(0xFFDC322F),
+    id: 'forest',
+    name: 'Forest',
+    brightness: Brightness.dark,
+    colors: PlusColors(
+      background: Color(0xFF1A1F1C),
+      surface: Color(0xFF202622),
+      raised: Color(0xFF262D29),
+      bubbleIn: Color(0xFF262D29),
+      line: Color(0xFF2F3732),
+      text: Color(0xFFE7EEE9),
+      textMuted: Color(0xFFA3B1A8),
+      textFaint: Color(0xFF8A988F),
+      accent: Color(0xFF8BD3A0),
+      onAccent: Color(0xFF0D130F),
+      ownBubble: Color(0xFF2F6B45),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFCDEFD8),
+      danger: Color(0xFFF28B82),
+      onDanger: Color(0xFF0D130F),
     ),
   ),
   ThemePreset(
-    id: 'tokyonight',
-    name: 'Tokyo Night',
-    light: ThemePalette(
-      background: Color(0xFFE1E2E7),
-      foreground: Color(0xFF3760BF),
-      primary: Color(0xFF2E7DE9),
-      secondary: Color(0xFF9854F1),
-      tertiary: Color(0xFF007197),
-      error: Color(0xFFF52A65),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF1A1B26),
-      foreground: Color(0xFFC0CAF5),
-      primary: Color(0xFF7AA2F7),
-      secondary: Color(0xFFBB9AF7),
-      tertiary: Color(0xFF7DCFFF),
-      error: Color(0xFFF7768E),
-    ),
-  ),
-  ThemePreset(
-    id: 'rosepine',
-    name: 'Rosé Pine',
-    light: ThemePalette(
-      background: Color(0xFFFAF4ED),
-      foreground: Color(0xFF575279),
-      primary: Color(0xFF907AA9),
-      secondary: Color(0xFFD7827E),
-      tertiary: Color(0xFF56949F),
-      error: Color(0xFFB4637A),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF191724),
-      foreground: Color(0xFFE0DEF4),
-      primary: Color(0xFFC4A7E7),
-      secondary: Color(0xFFEBBCBA),
-      tertiary: Color(0xFF9CCFD8),
-      error: Color(0xFFEB6F92),
+    id: 'paper',
+    name: 'Paper',
+    brightness: Brightness.light,
+    colors: PlusColors(
+      background: Color(0xFFF5F6F8),
+      surface: Color(0xFFFFFFFF),
+      raised: Color(0xFFE9EBF0),
+      bubbleIn: Color(0xFFFFFFFF),
+      line: Color(0xFFE1E4EA),
+      text: Color(0xFF15161A),
+      textMuted: Color(0xFF5B6070),
+      textFaint: Color(0xFF696E7E),
+      accent: Color(0xFF2F54EB),
+      onAccent: Color(0xFFFFFFFF),
+      ownBubble: Color(0xFF2F54EB),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFE3E9FF),
+      danger: Color(0xFFC62828),
+      onDanger: Color(0xFFFFFFFF),
+      outlineBubbles: true,
     ),
   ),
   ThemePreset(
-    id: 'everforest',
-    name: 'Everforest',
-    light: ThemePalette(
-      background: Color(0xFFFDF6E3),
-      foreground: Color(0xFF5C6A72),
-      primary: Color(0xFF8DA101),
-      secondary: Color(0xFF35A77C),
-      tertiary: Color(0xFF3A94C5),
-      error: Color(0xFFF85552),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF2D353B),
-      foreground: Color(0xFFD3C6AA),
-      primary: Color(0xFFA7C080),
-      secondary: Color(0xFF83C092),
-      tertiary: Color(0xFF7FBBB3),
-      error: Color(0xFFE67E80),
-    ),
-  ),
-  ThemePreset(
-    id: 'onedark',
-    name: 'One Dark',
-    light: ThemePalette(
-      background: Color(0xFFFAFAFA),
-      foreground: Color(0xFF383A42),
-      primary: Color(0xFF4078F2),
-      secondary: Color(0xFFA626A4),
-      tertiary: Color(0xFF50A14F),
-      error: Color(0xFFE45649),
-    ),
-    dark: ThemePalette(
-      background: Color(0xFF282C34),
-      foreground: Color(0xFFABB2BF),
-      primary: Color(0xFF61AFEF),
-      secondary: Color(0xFFC678DD),
-      tertiary: Color(0xFF98C379),
-      error: Color(0xFFE06C75),
+    id: 'sand',
+    name: 'Sand',
+    brightness: Brightness.light,
+    colors: PlusColors(
+      background: Color(0xFFF3EEE6),
+      surface: Color(0xFFFFFCF7),
+      raised: Color(0xFFE8E1D5),
+      bubbleIn: Color(0xFFFFFCF7),
+      line: Color(0xFFE2DACD),
+      text: Color(0xFF2A231E),
+      textMuted: Color(0xFF6B5F55),
+      textFaint: Color(0xFF76695E),
+      accent: Color(0xFFA04A1C),
+      onAccent: Color(0xFFFFFFFF),
+      ownBubble: Color(0xFF8C3F17),
+      onOwnBubble: Color(0xFFFFFFFF),
+      ownLink: Color(0xFFFFE2CF),
+      danger: Color(0xFFB42318),
+      onDanger: Color(0xFFFFFFFF),
+      outlineBubbles: true,
     ),
   ),
 ];

@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/active_call_indicator.dart';
 import 'package:fluffychat/pages/chat_list/unread_bubble.dart';
@@ -49,6 +50,7 @@ class ChatListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final plus = PlusColors.of(context);
 
     final isMuted = room.pushRuleState != PushRuleState.notify;
     final typingText = room.getLocalizedTypingText(context);
@@ -57,11 +59,9 @@ class ChatListItem extends StatelessWidget {
     final directChatMatrixId = room.directChatMatrixID;
     final isDirectChat = directChatMatrixId != null;
     final hasNotifications = room.notificationCount > 0;
-    final backgroundColor = selected
-        ? theme.colorScheme.tertiaryContainer
-        : activeChat
-        ? theme.colorScheme.secondaryContainer
-        : null;
+    final backgroundColor = selected || activeChat ? plus.raised : null;
+    // Read chats fade back so the ones that need attention stand out.
+    final unread = room.isUnreadOrInvited;
     final displayname = room.getNicknameOrDisplayname(
       MatrixLocals(L10n.of(context)),
     );
@@ -75,18 +75,20 @@ class ChatListItem extends StatelessWidget {
         room.getState(EventTypes.RoomMember, lastEvent.senderId) == null;
     final space = this.space;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: plus.line)),
+      ),
       child: Material(
-        borderRadius: BorderRadius.circular(AppConfig.borderRadius),
         clipBehavior: Clip.hardEdge,
-        color: backgroundColor,
+        color: backgroundColor ?? Colors.transparent,
         child: FutureBuilder(
           future: room.name.isEmpty ? room.loadHeroUsers() : null,
           builder: (context, _) => HoverBuilder(
             builder: (context, listTileHovered) => ListTile(
-              minVerticalPadding: 16,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              minVerticalPadding: 12,
+              horizontalTitleGap: 12,
+              contentPadding: const EdgeInsets.only(left: 18, right: 14),
               onLongPress: () => onLongPress?.call(context),
               leading: HoverBuilder(
                 builder: (context, hovered) => AnimatedScale(
@@ -94,8 +96,8 @@ class ChatListItem extends StatelessWidget {
                   curve: FluffyThemes.animationCurve,
                   scale: hovered ? 1.1 : 1.0,
                   child: SizedBox(
-                    width: Avatar.defaultSize,
-                    height: Avatar.defaultSize,
+                    width: 44,
+                    height: 44,
                     child: Stack(
                       children: [
                         if (space != null)
@@ -118,7 +120,7 @@ class ChatListItem extends StatelessWidget {
                                 AppConfig.spaceBorderRadius * 0.75,
                               ),
                               mxContent: space.avatar,
-                              size: Avatar.defaultSize * 0.75,
+                              size: 44 * 0.75,
                               name: space.getNicknameOrDisplayname(),
                               onTap: () => onLongPress?.call(context),
                             ),
@@ -126,7 +128,14 @@ class ChatListItem extends StatelessWidget {
                         Positioned(
                           bottom: 0,
                           right: 0,
-                          child: Avatar(
+                          child: ColorFiltered(
+                            colorFilter: unread || selected || activeChat
+                                ? const ColorFilter.mode(
+                                    Colors.transparent,
+                                    BlendMode.dst,
+                                  )
+                                : mutedColorFilter,
+                            child: Avatar(
                             shapeBorder: space == null
                                 ? room.isSpace
                                       ? RoundedSuperellipseBorder(
@@ -146,9 +155,7 @@ class ChatListItem extends StatelessWidget {
                                           backgroundColor ??
                                           theme.colorScheme.surface,
                                     ),
-                                    borderRadius: BorderRadius.circular(
-                                      Avatar.defaultSize,
-                                    ),
+                                    borderRadius: BorderRadius.circular(44),
                                   ),
                             borderRadius: room.isSpace
                                 ? BorderRadius.circular(
@@ -156,13 +163,12 @@ class ChatListItem extends StatelessWidget {
                                   )
                                 : null,
                             mxContent: room.avatar,
-                            size: space != null
-                                ? Avatar.defaultSize * 0.75
-                                : Avatar.defaultSize,
+                            size: space != null ? 44 * 0.75 : 44,
                             name: displayname,
                             presenceUserId: directChatMatrixId,
                             presenceBackgroundColor: backgroundColor,
                             onTap: () => onLongPress?.call(context),
+                          ),
                           ),
                         ),
                         if (selected)
@@ -171,13 +177,10 @@ class ChatListItem extends StatelessWidget {
                               onTap: () => onLongPress?.call(context),
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.tertiary,
+                                  color: plus.accent,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  Icons.check,
-                                  color: theme.colorScheme.onTertiary,
-                                ),
+                                child: Icon(Icons.check, color: plus.onAccent),
                               ),
                             ),
                           ),
@@ -208,29 +211,43 @@ class ChatListItem extends StatelessWidget {
               ),
               title: Row(
                 children: <Widget>[
-                  Expanded(
+                  Flexible(
                     child: Text(
                       displayname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       softWrap: false,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                        color: unread ? plus.text : plus.textMuted,
+                      ),
                     ),
                   ),
                   if (room.isReadOnlyForMe)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4.0),
-                      child: Icon(Icons.lock_outline, size: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 5.0),
+                      child: Icon(
+                        Icons.lock_outline,
+                        size: 14,
+                        color: plus.textFaint,
+                      ),
                     ),
                   if (room.client.isSnoozed(room.id))
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4.0),
-                      child: Icon(Icons.snooze, size: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 5.0),
+                      child: Icon(Icons.snooze, size: 14, color: plus.textFaint),
                     )
                   else if (isMuted)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4.0),
-                      child: Icon(Icons.notifications_off_outlined, size: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 5.0),
+                      child: Icon(
+                        Icons.notifications_off_outlined,
+                        size: 14,
+                        color: plus.textFaint,
+                      ),
                     ),
+                  const Spacer(),
                   if (room.isLowPriority)
                     Padding(
                       padding: EdgeInsets.only(
@@ -261,15 +278,9 @@ class ChatListItem extends StatelessWidget {
                           context,
                         ),
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: room.hasNewMessages
-                              ? FontWeight.bold
-                              : null,
-                          color: room.highlightCount >= 1
-                              ? theme.colorScheme.error
-                              : room.hasNewMessages
-                              ? theme.colorScheme.primary
-                              : null,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: plus.textFaint,
                         ),
                       ),
                     ),
@@ -340,11 +351,15 @@ class ChatListItem extends StatelessWidget {
                             L10n.of(
                               context,
                             ).countChats(room.spaceChildren.length),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: plus.textFaint,
+                            ),
                           )
                         : typingText.isNotEmpty
                         ? Text(
                             typingText,
-                            style: TextStyle(color: theme.colorScheme.primary),
+                            style: TextStyle(fontSize: 13, color: plus.accent),
                             maxLines: 1,
                             softWrap: false,
                           )
@@ -393,9 +408,11 @@ class ChatListItem extends StatelessWidget {
                                                 ).inviteGroupChat)
                                     : body ?? L10n.of(context).noMessagesYet,
                                 softWrap: false,
-                                maxLines: room.notificationCount >= 1 ? 2 : 1,
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
+                                  fontSize: 13,
+                                  color: unread ? plus.textMuted : plus.textFaint,
                                   decoration: room.lastEvent?.redacted == true
                                       ? TextDecoration.lineThrough
                                       : null,

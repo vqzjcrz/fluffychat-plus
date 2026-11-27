@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:fluffychat/config/app_config.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/space_prefs_extension.dart';
@@ -19,7 +20,19 @@ ThemeData themeWithSpaceAccent(ThemeData theme, Color seed) {
     brightness: theme.brightness,
     dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
   );
+  final plus =
+      theme.extension<PlusColors>() ?? PlusColors.fromScheme(theme.colorScheme);
+  final light = theme.brightness == Brightness.light;
   return theme.copyWith(
+    extensions: [
+      plus.copyWith(
+        accent: accent.primary,
+        onAccent: accent.onPrimary,
+        ownBubble: light ? accent.primary : accent.primaryContainer,
+        onOwnBubble: light ? accent.onPrimary : accent.onPrimaryContainer,
+        ownLink: light ? accent.primaryFixed : accent.onTertiaryContainer,
+      ),
+    ],
     colorScheme: theme.colorScheme.copyWith(
       primary: accent.primary,
       onPrimary: accent.onPrimary,

@@ -3246,5 +3246,17 @@
     "readOnlyByYouNote": "You made this chat read-only.",
     "@readOnlyByYouNote": {
         "description": "Shown instead of the message input in a chat the user made read-only"
+    },
+    "materialYouTheme": "Material You",
+    "@materialYouTheme": {
+        "description": "Theme that uses the chosen chat color (Material You)"
+    },
+    "spaceMembers": "Members",
+    "@spaceMembers": {
+        "description": "Tab in a space that opens its member list"
+    },
+    "moreOptions": "More options",
+    "@moreOptions": {
+        "description": "Tooltip of a menu button"
     }
 }

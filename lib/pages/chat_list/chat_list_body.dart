@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:fluffychat/config/plus_colors.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/chat_list.dart';
@@ -16,6 +17,7 @@ import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/stream_extension.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/public_room_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
+import 'package:fluffychat/widgets/plus_tab.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
@@ -143,51 +145,40 @@ class ChatListViewBody extends StatelessWidget {
                   ),
                 ],
                 if (client.rooms.isNotEmpty && !controller.isSearchMode)
-                  Container(
-                    height: 36 + 8 + 8,
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      shrinkWrap: true,
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        ...ActiveFilter.values
-                            .where((filter) => filter != ActiveFilter.tag)
-                            .map(
-                              (filter) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4.0,
-                                ),
-                                child: Center(
-                                  child: FilterChip(
-                                    selected: filter == controller.activeFilter,
-                                    onSelected: (_) => controller
-                                        .setActiveFilter(filter, null),
-                                    label: Text(
-                                      filter.toLocalizedString(context),
-                                    ),
-                                  ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: PlusColors.of(context).line),
+                      ),
+                    ),
+                    child: SizedBox(
+                      height: 38,
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          ...ActiveFilter.values
+                              .where((filter) => filter != ActiveFilter.tag)
+                              .map(
+                                (filter) => PlusTab(
+                                  label: filter.toLocalizedString(context),
+                                  selected: filter == controller.activeFilter,
+                                  onTap: () =>
+                                      controller.setActiveFilter(filter, null),
                                 ),
                               ),
-                            ),
-                        ...controller.roomTags.entries.map(
-                          (entry) => Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4.0,
-                            ),
-                            child: Center(
-                              child: FilterChip(
-                                selected: entry.key == controller.activeTag,
-                                onSelected: (_) => controller.setActiveFilter(
-                                  ActiveFilter.tag,
-                                  entry.key,
-                                ),
-                                label: Text(entry.key.replaceFirst('u.', '')),
+                          ...controller.roomTags.entries.map(
+                            (entry) => PlusTab(
+                              label: entry.key.replaceFirst('u.', ''),
+                              selected: entry.key == controller.activeTag,
+                              onTap: () => controller.setActiveFilter(
+                                ActiveFilter.tag,
+                                entry.key,
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 if (controller.isSearchMode)
