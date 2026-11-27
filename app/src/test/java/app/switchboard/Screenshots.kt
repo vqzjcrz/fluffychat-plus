@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ApplicationProvider
 import app.switchboard.core.Bridges
 import app.switchboard.core.PlusTypes
@@ -123,7 +124,7 @@ class Screenshots {
     private fun shoot(name: String, content: @Composable () -> Unit) {
         rule.setContent { content() }
         rule.waitForIdle()
-        val view = (rule.onRoot().fetchSemanticsNode().root as androidx.compose.ui.node.RootForTest).view.rootView
+        val view = (rule.onRoot().fetchSemanticsNode().root as androidx.compose.ui.platform.ViewRootForTest).view.rootView
         val bmp = Bitmap.createBitmap(view.width.coerceAtLeast(1), view.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         view.draw(Canvas(bmp))
         val dir = File("build/screens").apply { mkdirs() }

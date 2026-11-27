@@ -26,7 +26,7 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
@@ -330,7 +330,7 @@ private fun SubspaceRow(s: RoomSummary, onClick: () -> Unit) {
             Text(s.realName, fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("Space", style = Sbt.small, color = c.textMuted)
         }
-        Icon(Icons.Filled.KeyboardArrowRight, null, tint = c.textFaint)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.textFaint)
     }
 }
 

@@ -31,7 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -137,7 +137,7 @@ fun MediaViewer(items: List<ViewerItem>, startKey: String, onClose: () -> Unit) 
                         Text(formatTime(item.ts), color = Color.White.copy(alpha = 0.7f), fontFamily = Inter, maxLines = 1)
                     }
                 }
-                if (item?.externalUrl != null) RoundIcon(Icons.Outlined.OpenInNew, "Open on Instagram") { openUri(context, item.externalUrl) }
+                if (item?.externalUrl != null) RoundIcon(Icons.AutoMirrored.Outlined.OpenInNew, "Open on Instagram") { openUri(context, item.externalUrl) }
                 if (item != null) {
                     RoundIcon(Icons.Outlined.Share, "Share") { scope.launch { shareMedia(context, item) } }
                     RoundIcon(Icons.Outlined.Download, "Save") { scope.launch { saveMedia(context, item) } }
