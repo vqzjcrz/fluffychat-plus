@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.MarkChatUnread
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -544,6 +545,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
         val snoozed = plus.snoozedUntil(roomId) != null
         val actions = mutableListOf(
             SheetAction("Chat details", Icons.Outlined.Info) { nav.push(Screen.RoomDetails(roomId)) },
+            SheetAction("Search messages", Icons.Outlined.Search) { nav.push(Screen.Search(roomId)) },
             SheetAction(if (summary.isMuted) "Unmute" else "Mute", if (summary.isMuted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff) {
                 scope.launch { runCatching { Sb.matrix.setMuted(roomId, !summary.isMuted); Sb.matrix.refreshRooms(listOf(roomId)) } }
             },

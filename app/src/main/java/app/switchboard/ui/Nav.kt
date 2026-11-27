@@ -28,6 +28,7 @@ sealed interface Screen {
     data class Share(val text: String?, val uris: List<android.net.Uri>) : Screen
     data class EditRoom(val roomId: String) : Screen
     data class SpaceRooms(val spaceId: String) : Screen
+    data class Search(val roomId: String) : Screen
 }
 
 /** A simple back stack of screens. */

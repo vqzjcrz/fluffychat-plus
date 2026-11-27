@@ -151,5 +151,6 @@ private fun ScreenContent(s: Screen) {
         is Screen.Share -> ShareScreen(s.text, s.uris)
         is Screen.EditRoom -> EditRoomScreen(s.roomId)
         is Screen.SpaceRooms -> SpaceRoomsScreen(s.spaceId)
+        is Screen.Search -> app.switchboard.ui.chat.SearchScreen(s.roomId)
     }
 }
