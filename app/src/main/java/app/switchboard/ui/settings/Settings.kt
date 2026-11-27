@@ -205,7 +205,7 @@ private fun ThemeCard(name: String, bg: Color, bubble: Color, own: Color, accent
             }
         }
         Row(Modifier.fillMaxWidth().background(c.surface).padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(name, fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = c.text, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(name, fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = if (name.length > 9) 11.sp else 13.sp, color = c.text, modifier = Modifier.weight(1f), maxLines = 1)
             if (selected) androidx.compose.material3.Icon(Icons.Filled.Check, null, tint = c.accent, modifier = Modifier.size(16.dp))
         }
     }
@@ -252,8 +252,8 @@ fun SettingsAboutScreen() {
         ScreenHeader("About", onBack = { nav.pop() })
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
             androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(app.switchboard.R.drawable.ic_launcher_foreground), null,
-                Modifier.size(96.dp).clip(RoundedCornerShape(24.dp)).background(Color.Black),
+                androidx.compose.ui.res.painterResource(app.switchboard.R.drawable.logo_mark), null,
+                Modifier.size(96.dp).clip(RoundedCornerShape(24.dp)),
             )
             Spacer(Modifier.height(16.dp))
             Text("Switchboard", style = Sbt.title, color = c.text)

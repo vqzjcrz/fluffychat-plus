@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import app.switchboard.R
@@ -74,7 +75,7 @@ fun SwitchboardApp() {
 @Composable
 private fun Splash() {
     Box(Modifier.fillMaxSize().background(Sbt.c.background), contentAlignment = Alignment.Center) {
-        Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(140.dp))
+        Image(painterResource(R.drawable.logo_mark), null, Modifier.size(96.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)))
     }
 }
 

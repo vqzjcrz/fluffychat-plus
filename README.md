@@ -81,7 +81,7 @@ phone, so the snooze ends on its own.
 
 - Text with Markdown, replies, edits, reactions (quick row plus a full emoji
   picker), deleting, forwarding, copying, links, mentions with `@` suggestions.
-- Photos, videos, GIFs, files, voice messages (hold the mic), camera.
+- Photos, videos, GIFs, files, camera, voice messages (tap the mic to record, then send or discard).
 - **Reels** from the Instagram bridge and the reels hub show as 9:16 cards and
   play in the viewer. Drag a video or picture down to close the viewer.
 - **Pin for me**: pin a message just for yourself, even in read-only chats.

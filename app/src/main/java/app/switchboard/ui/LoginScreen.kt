@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -68,7 +70,7 @@ fun LoginScreen() {
         verticalArrangement = Arrangement.Top,
     ) {
         Spacer(Modifier.height(56.dp))
-        Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(96.dp).background(androidx.compose.ui.graphics.Color.Black, RoundedCornerShape(24.dp)))
+        Image(painterResource(R.drawable.logo_mark), null, Modifier.size(84.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, c.line, RoundedCornerShape(22.dp)))
         Spacer(Modifier.height(22.dp))
         Kicker("Matrix client")
         Text("Switchboard", style = Sbt.title, color = c.text)
