@@ -172,3 +172,18 @@ object ScheduledMessages {
         save(_all.value.filter { it.delayId != s.delayId })
     }
 }
+
+/**
+ * Read receipts. Reading a chat sends a private receipt (clears your unread count on
+ * your own devices only), so bridged services don't see "seen". Sending something
+ * first sends a normal receipt, so they see you read the chat when you reply.
+ */
+object Receipts {
+    val readType: org.matrix.rustcomponents.sdk.ReceiptType
+        get() = if (Prefs.publicReceipts.value) org.matrix.rustcomponents.sdk.ReceiptType.READ
+        else org.matrix.rustcomponents.sdk.ReceiptType.READ_PRIVATE
+
+    suspend fun beforeSending(t: org.matrix.rustcomponents.sdk.Timeline) {
+        if (!Prefs.publicReceipts.value) runCatching { t.markAsRead(org.matrix.rustcomponents.sdk.ReceiptType.READ) }
+    }
+}

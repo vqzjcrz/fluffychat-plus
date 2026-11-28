@@ -81,6 +81,7 @@ import app.switchboard.core.Prefs
 import app.switchboard.core.RoomActions
 import app.switchboard.core.Sb
 import app.switchboard.core.ScheduledMessages
+import app.switchboard.core.Receipts
 import app.switchboard.core.Sending
 import app.switchboard.ui.LocalNav
 import app.switchboard.ui.Screen
@@ -241,7 +242,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
     LaunchedEffect(lastKey, focus) {
         if (lastKey != null && focus == null) {
             delay(400)
-            runCatching { tl.timeline?.markAsRead(ReceiptType.READ) }
+            runCatching { tl.timeline?.markAsRead(Receipts.readType) }
             if (summary.markedUnread) runCatching { room.setUnreadFlag(false) }
         }
     }
@@ -336,6 +337,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
         scope.launch {
             runCatching { room.typingNotice(false) }
             val t = (if (focused) runCatching { room.timeline() }.getOrNull() else tl.timeline) ?: return@launch
+            if (editing == null) Receipts.beforeSending(t)
             try {
                 val content = Sending.content(md, ids)
                 when {
@@ -475,6 +477,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
                         composer.replyTo = null
                         scope.launch {
                             val t = tl.timeline ?: return@launch
+                            Receipts.beforeSending(t)
                             for (u in uris) {
                                 try {
                                     val lf = Sending.copyToCache(context, u)
@@ -488,6 +491,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
                         composer.replyTo = null
                         scope.launch {
                             val t = tl.timeline ?: return@launch
+                            Receipts.beforeSending(t)
                             runCatching { Sending.sendVoice(t, file, ms, wf, mime, reply) }.onFailure { nav.toast("Couldn't send the voice message: ${it.message}") }
                         }
                     },

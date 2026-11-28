@@ -16,7 +16,7 @@ object RoomActions {
 
     suspend fun markRead(roomId: String) {
         val r = m.room(roomId) ?: return
-        retryOnRateLimit { r.markAsRead(ReceiptType.READ) }
+        retryOnRateLimit { r.markAsRead(Receipts.readType) }
         if (m.summary(roomId)?.markedUnread == true) runCatching { r.setUnreadFlag(false) }
     }
 

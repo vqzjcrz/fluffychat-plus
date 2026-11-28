@@ -23,6 +23,7 @@ object Prefs {
         _autoplayGifs.value = sp.getBoolean(KEY_GIFS, true)
         _linkPreviews.value = sp.getBoolean(KEY_PREVIEWS, true)
         _sendTyping.value = sp.getBoolean(KEY_TYPING, false)
+        _publicReceipts.value = sp.getBoolean(KEY_RECEIPTS_OUT, false)
         _doubleTapReaction.value = sp.getString(KEY_DOUBLE_TAP, "\u2764\uFE0F") ?: ""
         _railLabels.value = sp.getBoolean(KEY_RAIL_LABELS, false)
     }
@@ -37,6 +38,7 @@ object Prefs {
     private const val KEY_GIFS = "autoplay_gifs"
     private const val KEY_PREVIEWS = "link_previews"
     private const val KEY_TYPING = "send_typing"
+    private const val KEY_RECEIPTS_OUT = "public_read_receipts"
     private const val KEY_DOUBLE_TAP = "double_tap_reaction"
     private const val KEY_RAIL_LABELS = "rail_labels"
 
@@ -81,6 +83,11 @@ object Prefs {
     private val _sendTyping = MutableStateFlow(false)
     val sendTyping: StateFlow<Boolean> = _sendTyping
     fun setSendTyping(v: Boolean) { _sendTyping.value = v; sp.edit().putBoolean(KEY_TYPING, v).apply() }
+
+    /** Off: reading a chat sends a private receipt; others only see "read" once you send something. */
+    private val _publicReceipts = MutableStateFlow(false)
+    val publicReceipts: StateFlow<Boolean> = _publicReceipts
+    fun setPublicReceipts(v: Boolean) { _publicReceipts.value = v; sp.edit().putBoolean(KEY_RECEIPTS_OUT, v).apply() }
 
     /** Emoji to react with when double-tapping a message; empty turns it off. */
     private val _doubleTapReaction = MutableStateFlow("\u2764\uFE0F")

@@ -258,12 +258,14 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     Notifier.ACTION_REPLY -> {
                         val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(Notifier.KEY_REPLY)?.toString()?.trim()
                         if (!text.isNullOrEmpty()) {
-                            room.timeline().send(Sending.content(text, emptyList()))
+                            val t = room.timeline()
+                            app.switchboard.core.Receipts.beforeSending(t)
+                            t.send(Sending.content(text, emptyList()))
                             Notifier.addOwnReply(context, roomId, text)
                         }
                     }
                     Notifier.ACTION_READ -> {
-                        runCatching { room.markAsRead(ReceiptType.READ) }
+                        runCatching { room.markAsRead(app.switchboard.core.Receipts.readType) }
                         Notifier.cancel(context, roomId)
                     }
                 }

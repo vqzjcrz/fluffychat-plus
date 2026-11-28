@@ -229,6 +229,7 @@ fun SettingsChatScreen() {
     val gifs by Prefs.autoplayGifs.collectAsState()
     val previews by Prefs.linkPreviews.collectAsState()
     val typing by Prefs.sendTyping.collectAsState()
+    val publicReceipts by Prefs.publicReceipts.collectAsState()
     val doubleTap by Prefs.doubleTapReaction.collectAsState()
     var pickReaction by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Sbt.c.background)) {
@@ -242,6 +243,7 @@ fun SettingsChatScreen() {
             ToggleRow("Show read receipts", "\"Read\" under your messages", receipts) { Prefs.setShowReadReceipts(it) }
             ToggleRow("Enter key sends", null, enter) { Prefs.setSendOnEnter(it) }
             ToggleRow("Show when I'm typing", "Off: no one sees you typing, including on Discord, Signal, WhatsApp and Instagram", typing) { Prefs.setSendTyping(it) }
+            ToggleRow("Send read receipts when I read", "Off: others only see you've read a chat once you send something in it", publicReceipts) { Prefs.setPublicReceipts(it) }
             ToggleRow("Hide joins, leaves and other changes", null, hide) { Prefs.setHideStateEvents(it) }
             ToggleRow("Play GIFs automatically", null, gifs) { Prefs.setAutoplayGifs(it) }
             ToggleRow("Link previews", "Your server fetches the page; pictures are re-made by your server before they reach your phone", previews) { Prefs.setLinkPreviews(it) }
