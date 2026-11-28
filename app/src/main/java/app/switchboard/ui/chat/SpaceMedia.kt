@@ -86,7 +86,7 @@ object MediaGallery {
                 }
             }.awaitAll().flatten()
         }
-        val sorted = all.sortedByDescending { it.ts }
+        val sorted = all.distinctBy { it.key }.sortedByDescending { it.ts }
         cache[id] = sorted
         return sorted
     }
@@ -125,7 +125,10 @@ object MediaGallery {
             runCatching { t.paginateBackwards(60u) }
             delay(300)
             h.cancel()
-            synchronized(items) { items.toList() }.mapNotNull { TimelineMapper.map(it, own) as? TEvent }.mapNotNull { it.toViewerItem(roomId) }
+            // Timeline item keys are only unique within one chat, so key by chat and event.
+            synchronized(items) { items.toList() }.mapNotNull { TimelineMapper.map(it, own) as? TEvent }
+                .mapNotNull { it.toViewerItem(roomId) }
+                .map { it.copy(key = roomId + "|" + (it.eventId ?: it.key)) }
         } catch (_: Exception) {
             emptyList()
         }
