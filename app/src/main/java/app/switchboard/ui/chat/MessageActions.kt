@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,8 @@ val quickReactions = listOf("👍", "❤️", "😂", "😮", "😢", "🙏", "�
 fun EmojiPickerSheet(onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val light = Sbt.c.isLight
+    // Most of the screen, so the whole picker is open; the list scrolls inside it.
+    val height = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.8f).dp
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = Sbt.c.surface) {
         AndroidView(
             factory = { ctx ->
@@ -79,7 +82,9 @@ fun EmojiPickerSheet(onDismiss: () -> Unit, onPick: (String) -> Unit) {
                     setOnEmojiPickedListener { item -> onPick(item.emoji); onDismiss() }
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(420.dp).navigationBarsPadding(),
+            modifier = Modifier.fillMaxWidth().height(height)
+                .nestedScroll(androidx.compose.ui.platform.rememberNestedScrollInteropConnection())
+                .navigationBarsPadding(),
         )
     }
 }
