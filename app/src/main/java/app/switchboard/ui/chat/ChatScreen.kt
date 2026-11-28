@@ -354,6 +354,7 @@ private fun ChatContent(roomId: String, room: org.matrix.rustcomponents.sdk.Room
         val now = System.currentTimeMillis()
         if (active && now - lastTyping < 4000) return
         lastTyping = if (active) now else 0
+        if (active && !Prefs.sendTyping.value) return
         scope.launch { runCatching { room.typingNotice(active) } }
     }
 
