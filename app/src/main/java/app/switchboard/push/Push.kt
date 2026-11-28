@@ -164,14 +164,28 @@ object PushSetup {
 object QuietReels {
     private val link = Regex("instagram\\.com/(?:[^/?#\\s]+/)?(?:reels?|p|tv)/", RegexOption.IGNORE_CASE)
 
+    /** When each person last sent a reel in each Instagram chat. */
+    private val lastReel = HashMap<String, Long>()
+    private const val ATTACHED_MS = 10_000L
+
     fun applies(roomId: String, rawEvent: String): Boolean {
         val raw = runCatching { JSONObject(rawEvent) }.getOrNull() ?: return false
         val content = raw.optJSONObject("content")?.let { it.optJSONObject("m.new_content") ?: it } ?: return false
-        val isReel = link.containsMatchIn(content.optString("external_url")) || link.containsMatchIn(content.optString("body"))
-        if (!isReel) return false
+        val sender = raw.optString("sender")
+        val ts = raw.optLong("origin_server_ts", System.currentTimeMillis())
         val protocol = app.switchboard.core.Bridges.get(roomId)?.protocol.orEmpty()
-        return protocol.contains("instagram", true) || protocol.contains("meta", true) ||
-            app.switchboard.core.Bridges.guess(listOf(raw.optString("sender"))) == "Instagram"
+        val instagram = protocol.contains("instagram", true) || protocol.contains("meta", true) ||
+            app.switchboard.core.Bridges.guess(listOf(sender)) == "Instagram"
+        if (!instagram) return false
+        val key = "$roomId|$sender"
+        val isReel = link.containsMatchIn(content.optString("external_url")) || link.containsMatchIn(content.optString("body"))
+        if (isReel) {
+            synchronized(lastReel) { lastReel[key] = ts }
+            return true
+        }
+        // A message sent along with a reel is posted with it in the Reels room.
+        val reelAt = synchronized(lastReel) { lastReel[key] } ?: return false
+        return ts - reelAt in 0..ATTACHED_MS
     }
 }
 

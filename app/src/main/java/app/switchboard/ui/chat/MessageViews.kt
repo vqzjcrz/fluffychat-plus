@@ -523,6 +523,11 @@ fun ReelCard(b: Body.Reel, onClick: () -> Unit, onLong: (() -> Unit)?) {
         Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
             Text(b.author, fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (b.origin != null) Text(b.origin, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f), maxLines = 1)
+            if (b.note.isNotBlank()) Text(
+                b.note, fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White,
+                maxLines = 4, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 4.dp).background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
+            )
             if (b.caption.isNotBlank()) Text(b.caption, fontSize = 13.sp, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
     }

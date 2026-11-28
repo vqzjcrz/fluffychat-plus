@@ -39,7 +39,7 @@ sealed interface Body {
     data class Text(val text: String, val html: String?, val emote: Boolean = false, val notice: Boolean = false, val onlyEmoji: Boolean = false) : Body
     data class Image(val source: MediaSource, val thumb: MediaSource?, val w: Int, val h: Int, val caption: String?, val filename: String, val mime: String?, val animated: Boolean) : Body
     data class Video(val source: MediaSource, val thumb: MediaSource?, val w: Int, val h: Int, val durationMs: Long, val caption: String?, val filename: String, val mime: String?) : Body
-    data class Reel(val source: MediaSource, val thumb: MediaSource?, val url: String, val author: String, val origin: String?, val caption: String, val mime: String?, val filename: String) : Body
+    data class Reel(val source: MediaSource, val thumb: MediaSource?, val url: String, val author: String, val origin: String?, val caption: String, val mime: String?, val filename: String, val note: String = "") : Body
     data class Audio(val source: MediaSource, val durationMs: Long, val voice: Boolean, val waveform: List<Float>, val filename: String, val mime: String?) : Body
     data class File(val source: MediaSource, val filename: String, val size: Long, val mime: String?, val caption: String?) : Body
     data class Sticker(val source: MediaSource, val w: Int, val h: Int, val body: String) : Body
@@ -215,9 +215,11 @@ object TimelineMapper {
             if (sep > 0) { author = header.substring(0, sep); origin = header.substring(sep + 3) } else author = header
             lines = lines.drop(1)
         }
-        val caption = lines.filter { it.trim() != url }.joinToString("\n").trim()
+        // Lines starting with 💬 are the message the person sent along with the reel.
+        val note = lines.filter { it.startsWith("\uD83D\uDCAC") }.joinToString("\n") { it.removePrefix("\uD83D\uDCAC").trim() }
+        val caption = lines.filter { it.trim() != url && !it.startsWith("\uD83D\uDCAC") }.joinToString("\n").trim()
         val i = t.content.info
-        return Body.Reel(t.content.source, i?.thumbnailSource, url, author, origin?.takeIf { it != "DM" }, caption, i?.mimetype, t.content.filename)
+        return Body.Reel(t.content.source, i?.thumbnailSource, url, author, origin?.takeIf { it != "DM" }, caption, i?.mimetype, t.content.filename, note)
     }
 
     private fun stateText(s: OtherState, who: String): Body? = when (s) {
