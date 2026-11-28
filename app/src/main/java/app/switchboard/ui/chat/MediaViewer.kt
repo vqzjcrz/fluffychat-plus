@@ -11,6 +11,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
@@ -206,7 +210,40 @@ private fun VideoPage(item: ViewerItem, active: Boolean, onTap: () -> Unit) {
         file?.let { player.setMediaItem(MediaItem.fromUri(Uri.fromFile(it))); player.prepare() }
     }
     LaunchedEffect(active, file) { player.playWhenReady = active && file != null }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    // Hold anywhere on the video to play it at 2x; let go to go back to normal speed.
+    var fast by remember { mutableStateOf(false) }
+    LaunchedEffect(fast) { player.setPlaybackSpeed(if (fast) 2f else 1f) }
+    val haptic = LocalHapticFeedback.current
+    Box(
+        Modifier.fillMaxSize().pointerInput(item.key) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val held = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        val ch = e.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
+                        if (!ch.pressed || e.changes.size > 1) return@withTimeoutOrNull false
+                        if ((ch.position - down.position).getDistance() > viewConfiguration.touchSlop) return@withTimeoutOrNull false
+                    }
+                    @Suppress("UNREACHABLE_CODE") false
+                }
+                if (held != null || file == null) return@awaitEachGesture
+                try {
+                    fast = true
+                    player.playWhenReady = true
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    // Keep the hold from also toggling the player controls, swiping pages or closing.
+                    do {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        e.changes.forEach { it.consume() }
+                    } while (e.changes.any { it.pressed })
+                } finally {
+                    fast = false
+                }
+            }
+        },
+        contentAlignment = Alignment.Center,
+    ) {
         when {
             error != null -> Text("Couldn't load the video", color = Color.White)
             file == null -> {
@@ -221,6 +258,11 @@ private fun VideoPage(item: ViewerItem, active: Boolean, onTap: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
+        if (fast) Text(
+            "2× ▸▸", color = Color.White, fontFamily = Inter, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp)
+                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 6.dp),
+        )
     }
 }
 
