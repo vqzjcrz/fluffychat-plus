@@ -227,6 +227,7 @@ fun SettingsChatScreen() {
     val enter by Prefs.sendOnEnter.collectAsState()
     val hide by Prefs.hideStateEvents.collectAsState()
     val gifs by Prefs.autoplayGifs.collectAsState()
+    val previews by Prefs.linkPreviews.collectAsState()
     Column(Modifier.fillMaxSize().background(Sbt.c.background)) {
         ScreenHeader("Chats", onBack = { nav.pop() })
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -239,6 +240,7 @@ fun SettingsChatScreen() {
             ToggleRow("Enter key sends", null, enter) { Prefs.setSendOnEnter(it) }
             ToggleRow("Hide joins, leaves and other changes", null, hide) { Prefs.setHideStateEvents(it) }
             ToggleRow("Play GIFs automatically", null, gifs) { Prefs.setAutoplayGifs(it) }
+            ToggleRow("Link previews", "Your server fetches the page; pictures are re-made by your server before they reach your phone", previews) { Prefs.setLinkPreviews(it) }
         }
     }
 }

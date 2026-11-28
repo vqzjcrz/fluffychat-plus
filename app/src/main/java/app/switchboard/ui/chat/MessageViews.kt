@@ -9,7 +9,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.text.selection.DisableSelection
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -46,7 +52,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +65,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -66,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.switchboard.core.LinkPreviews
 import app.switchboard.core.Mxc
 import app.switchboard.core.Prefs
 import app.switchboard.core.Sb
@@ -97,6 +116,48 @@ class MessageCallbacks(
     val onOpenPanel: () -> Unit = {},
 )
 
+/**
+ * Where a message's text sits, so a long press can tell words (select text), links
+ * (share) and everything else (message actions) apart.
+ */
+class TextHit {
+    var row: LayoutCoordinates? = null
+    var coords: LayoutCoordinates? = null
+    var layout: TextLayoutResult? = null
+    var text: AnnotatedString? = null
+    /** Text selection is switched on only for presses that start on a word. */
+    var selectable by mutableStateOf(false)
+
+    sealed interface Target
+    data object Word : Target
+    data class Link(val url: String) : Target
+
+    fun at(p: Offset, slack: Float): Target? {
+        val r = row ?: return null
+        val t = coords ?: return null
+        val l = layout ?: return null
+        val str = text ?: return null
+        if (!r.isAttached || !t.isAttached) return null
+        val q = t.localPositionOf(r, p)
+        if (q.x < 0 || q.y < 0 || q.x > t.size.width || q.y > t.size.height) return null
+        val line = l.getLineForVerticalPosition(q.y)
+        if (q.y < l.getLineTop(line) || q.y > l.getLineBottom(line)) return null
+        if (q.x < l.getLineLeft(line) - slack || q.x > l.getLineRight(line) + slack) return null
+        val off = l.getOffsetForPosition(q)
+        for (o in intArrayOf(off, off - 1)) {
+            if (o !in str.indices || !l.getBoundingBox(o).inflate(slack).contains(q)) continue
+            val link = str.getLinkAnnotations(o, o + 1).firstOrNull()?.item
+            val url = when (link) {
+                is LinkAnnotation.Url -> link.url
+                is LinkAnnotation.Clickable -> link.tag
+                else -> null
+            }
+            if (url != null) return Link(url)
+        }
+        return Word
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun MessageItem(
@@ -124,10 +185,46 @@ fun MessageItem(
     var otherX by remember { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
     val threshold = with(density) { 64.dp.toPx() }
+    val hit = remember(ev.key) { TextHit() }
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     Column(
         Modifier.fillMaxWidth()
             .background(if (highlighted) c.accent.copy(alpha = 0.12f) else Color.Transparent)
+            .onGloballyPositioned { hit.row = it }
+            .pointerInput(ev.key) {
+                // Long press: on a word, text selection takes over; on a link, share it;
+                // anywhere else on the row, open the message's actions.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val target = hit.at(down.position, 6.dp.toPx())
+                    hit.selectable = target == TextHit.Word
+                    if (target == TextHit.Word) return@awaitEachGesture
+                    val link = (target as? TextHit.Link)?.url
+                    val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis - 60) {
+                        while (true) {
+                            val e = awaitPointerEvent(PointerEventPass.Initial)
+                            val ch = e.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
+                            if (!ch.pressed) {
+                                // A tap on a link opens it here, so it still works while selection is switched.
+                                if (link != null) { ch.consume(); cb.onLink(link) }
+                                return@withTimeoutOrNull true
+                            }
+                            if ((ch.position - down.position).getDistance() > viewConfiguration.touchSlop) return@withTimeoutOrNull false
+                        }
+                        @Suppress("UNREACHABLE_CODE") false
+                    }
+                    if (outcome == null) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (link != null) shareText(context, link) else cb.onLongPress(ev)
+                        do {
+                            val e = awaitPointerEvent(PointerEventPass.Initial)
+                            e.changes.forEach { it.consume() }
+                        } while (e.changes.any { it.pressed })
+                    }
+                }
+            }
             .padding(start = 14.dp, end = 14.dp, top = if (sameAsPrev) 2.dp else 10.dp, bottom = if (sameAsNext) 1.dp else 4.dp)
             .pointerInput(ev.key, swipeLeftToRight) {
                 detectHorizontalDragGestures(
@@ -162,7 +259,7 @@ fun MessageItem(
                         .offset(x = if (dragX > 0) (-36).dp else 36.dp).size(22.dp),
                 )
             }
-            BubbleContent(ev, own, sameAsPrev, sameAsNext, cb)
+            BubbleContent(ev, own, sameAsPrev, sameAsNext, cb, hit)
         }
         if (ev.reactions.isNotEmpty()) {
             FlowRow(
@@ -220,24 +317,25 @@ private fun bubbleShape(own: Boolean, top: Boolean, bottom: Boolean): RoundedCor
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BubbleContent(ev: TEvent, own: Boolean, sameAsPrev: Boolean, sameAsNext: Boolean, cb: MessageCallbacks) {
+private fun BubbleContent(ev: TEvent, own: Boolean, sameAsPrev: Boolean, sameAsNext: Boolean, cb: MessageCallbacks, hit: TextHit) {
     val c = Sbt.c
     val shape = bubbleShape(own, sameAsPrev, sameAsNext)
     val bg = if (own) c.ownBubble else c.bubbleIn
     val fg = if (own) c.onOwnBubble else c.text
     val tap: () -> Unit = {}
-    val long = { cb.onLongPress(ev) }
+    // Long presses are handled for the whole row in MessageItem.
+    val long: (() -> Unit)? = null
     val bubbleMod = Modifier.widthIn(max = 310.dp).clip(shape)
         .then(if (c.outlineBubbles && !own) Modifier.border(1.dp, c.line, shape) else Modifier)
     when (val b = ev.body) {
         is Body.Text -> {
             if (b.onlyEmoji && ev.reply == null) {
-                Text(b.text, fontSize = 40.sp, modifier = Modifier.combinedClickable(onClick = tap, onLongClick = long))
+                Text(b.text, fontSize = 40.sp)
                 return
             }
-            Column(bubbleMod.background(bg).combinedClickable(onClick = tap, onLongClick = long).padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Column(bubbleMod.background(bg).padding(horizontal = 14.dp, vertical = 10.dp)) {
                 ev.reply?.let { ReplyQuote(it, own, cb) }
-                MessageText(b, own, fg, cb)
+                MessageText(b, own, fg, cb, hit)
             }
         }
         is Body.Image -> Column(bubbleMod.background(bg)) {
@@ -283,7 +381,7 @@ private fun BubbleContent(ev: TEvent, own: Boolean, sameAsPrev: Boolean, sameAsN
 }
 
 @Composable
-private fun MessageText(b: Body.Text, own: Boolean, fg: Color, cb: MessageCallbacks) {
+private fun MessageText(b: Body.Text, own: Boolean, fg: Color, cb: MessageCallbacks, hit: TextHit) {
     val c = Sbt.c
     val colors = TextColors(
         text = fg,
@@ -294,12 +392,59 @@ private fun MessageText(b: Body.Text, own: Boolean, fg: Color, cb: MessageCallba
         quote = fg.copy(alpha = 0.75f),
     )
     val own2 = Sb.matrix.userId
-    val text = remember(b, colors) { RichText.render(b.text, b.html, colors, own2) { cb.onLink(it) } }
-    Text(
-        if (b.emote) androidx.compose.ui.text.buildAnnotatedString { append("* "); append(text) } else text,
-        style = Sbt.body.copy(fontStyle = if (b.emote) FontStyle.Italic else FontStyle.Normal),
-        color = if (b.notice) fg.copy(alpha = 0.8f) else fg,
-    )
+    val text = remember(b, colors) {
+        val t = RichText.render(b.text, b.html, colors, own2) { cb.onLink(it) }
+        if (b.emote) androidx.compose.ui.text.buildAnnotatedString { append("* "); append(t) } else t
+    }
+    hit.text = text
+    val content = @Composable {
+        Text(
+            text,
+            style = Sbt.body.copy(fontStyle = if (b.emote) FontStyle.Italic else FontStyle.Normal),
+            color = if (b.notice) fg.copy(alpha = 0.8f) else fg,
+            onTextLayout = { hit.layout = it },
+            modifier = Modifier.onGloballyPositioned { hit.coords = it },
+        )
+    }
+    CompositionLocalProvider(LocalTextSelectionColors provides TextSelectionColors(handleColor = c.accent, backgroundColor = fg.copy(alpha = 0.28f))) {
+        SelectionContainer {
+            if (hit.selectable) content() else DisableSelection { content() }
+        }
+    }
+    val previewUrl = remember(text) { LinkPreviews.firstUrl(text) }
+    if (previewUrl != null) LinkPreviewCard(previewUrl, fg, cb)
+}
+
+/** A link's title, description and picture, fetched and re-encoded by your own server. */
+@Composable
+private fun LinkPreviewCard(url: String, fg: Color, cb: MessageCallbacks) {
+    val enabled by Prefs.linkPreviews.collectAsState()
+    if (!enabled) return
+    var preview by remember(url) { mutableStateOf(LinkPreviews.cached(url)) }
+    LaunchedEffect(url) { if (preview == null) preview = LinkPreviews.get(url) }
+    val p = preview ?: return
+    if (p.isEmpty) return
+    var imageFailed by remember(url) { mutableStateOf(false) }
+    Column(
+        Modifier.padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(10.dp))
+            .background(fg.copy(alpha = 0.07f)).clickable { cb.onLink(url) },
+    ) {
+        if (p.image != null && !imageFailed) {
+            val ratio = if (p.width > 0 && p.height > 0) (p.width.toFloat() / p.height).coerceIn(1f, 2.4f) else 1.91f
+            AsyncImage(
+                model = Mxc(url = p.image, width = 640, height = 480, thumbnailOnly = true),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                onError = { imageFailed = true },
+                modifier = Modifier.fillMaxWidth().aspectRatio(ratio).background(fg.copy(alpha = 0.05f)),
+            )
+        }
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Text(p.host, style = Sbt.tiny, color = fg.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            p.title?.let { Text(it, fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = fg, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            p.description?.let { Text(it, fontSize = 13.sp, color = fg.copy(alpha = 0.75f), maxLines = 3, overflow = TextOverflow.Ellipsis) }
+        }
+    }
 }
 
 @Composable
@@ -327,7 +472,7 @@ fun MediaThumb(
     full: org.matrix.rustcomponents.sdk.MediaSource? = null,
     maxW: Int = 280,
     onClick: () -> Unit,
-    onLong: () -> Unit,
+    onLong: (() -> Unit)?,
     bubble: Boolean = true,
 ) {
     val context = LocalContext.current
@@ -356,7 +501,7 @@ private fun PlayBadge() {
 /** A reel as a tall 9:16 card, like a reel shared in an Instagram DM. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ReelCard(b: Body.Reel, onClick: () -> Unit, onLong: () -> Unit) {
+fun ReelCard(b: Body.Reel, onClick: () -> Unit, onLong: (() -> Unit)?) {
     val c = Sbt.c
     val context = LocalContext.current
     Box(
@@ -434,7 +579,7 @@ private fun Waveform(samples: List<Float>, progress: Float, color: Color, onSeek
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FileRow(b: Body.File, fg: Color, mod: Modifier, onLong: () -> Unit) {
+private fun FileRow(b: Body.File, fg: Color, mod: Modifier, onLong: (() -> Unit)?) {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     Row(

@@ -21,6 +21,7 @@ object Prefs {
         _sendOnEnter.value = sp.getBoolean(KEY_ENTER, false)
         _hideStateEvents.value = sp.getBoolean(KEY_HIDE_STATE, true)
         _autoplayGifs.value = sp.getBoolean(KEY_GIFS, true)
+        _linkPreviews.value = sp.getBoolean(KEY_PREVIEWS, true)
         _railLabels.value = sp.getBoolean(KEY_RAIL_LABELS, false)
     }
 
@@ -32,6 +33,7 @@ object Prefs {
     private const val KEY_ENTER = "send_on_enter"
     private const val KEY_HIDE_STATE = "hide_state_events"
     private const val KEY_GIFS = "autoplay_gifs"
+    private const val KEY_PREVIEWS = "link_previews"
     private const val KEY_RAIL_LABELS = "rail_labels"
 
     private val _theme = MutableStateFlow("mono")
@@ -66,6 +68,10 @@ object Prefs {
     private val _autoplayGifs = MutableStateFlow(true)
     val autoplayGifs: StateFlow<Boolean> = _autoplayGifs
     fun setAutoplayGifs(v: Boolean) { _autoplayGifs.value = v; sp.edit().putBoolean(KEY_GIFS, v).apply() }
+
+    private val _linkPreviews = MutableStateFlow(true)
+    val linkPreviews: StateFlow<Boolean> = _linkPreviews
+    fun setLinkPreviews(v: Boolean) { _linkPreviews.value = v; sp.edit().putBoolean(KEY_PREVIEWS, v).apply() }
 
     private val _railLabels = MutableStateFlow(false)
     val railLabels: StateFlow<Boolean> = _railLabels

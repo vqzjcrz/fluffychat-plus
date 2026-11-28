@@ -25,9 +25,16 @@ import java.io.File
  * A picture stored on the homeserver: an mxc:// URL (avatars) or a full
  * media source as JSON (message attachments, which may be encrypted).
  */
-data class Mxc(val url: String? = null, val sourceJson: String? = null, val width: Int = 0, val height: Int = 0) {
+data class Mxc(
+    val url: String? = null,
+    val sourceJson: String? = null,
+    val width: Int = 0,
+    val height: Int = 0,
+    /** Only ever load the server-made thumbnail, never the original file. */
+    val thumbnailOnly: Boolean = false,
+) {
     val isThumbnail get() = width > 0 && height > 0
-    val key get() = (url ?: sourceJson ?: "") + "@" + width + "x" + height
+    val key get() = (url ?: sourceJson ?: "") + "@" + width + "x" + height + if (thumbnailOnly) "!t" else ""
 
     fun source(): MediaSource = if (sourceJson != null) MediaSource.fromJson(sourceJson) else MediaSource.fromUrl(url!!)
 
@@ -44,7 +51,8 @@ class MxcFetcher(private val data: Mxc, private val options: Options) : Fetcher 
         val bytes = if (data.isThumbnail) {
             try {
                 client.getMediaThumbnail(source, data.width.toULong(), data.height.toULong())
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (data.thumbnailOnly) throw e
                 client.getMediaContent(source)
             }
         } else client.getMediaContent(source)
