@@ -149,10 +149,29 @@ object PushSetup {
         val setup = Sb.matrix.syncService?.let { NotificationProcessSetup.SingleProcess(it) } ?: NotificationProcessSetup.MultipleProcesses
         val nc = client.notificationClient(setup)
         when (val st = nc.getNotification(roomId, eventId)) {
-            is NotificationStatus.Event -> Notifier.show(context, st.item, roomId, eventId)
+            is NotificationStatus.Event -> if (!QuietReels.applies(roomId, st.item.rawEvent)) Notifier.show(context, st.item, roomId, eventId)
             else -> {}
         }
         app.switchboard.widget.ChatWidget.updateAll(context)
+    }
+}
+
+/**
+ * Reels notify only in the Reels room: a reel (or Instagram post link) in an Instagram chat
+ * stays quiet. The Reels room's copies come from the reels hub's bot, not an Instagram
+ * chat, so they still notify. Regular messages in Instagram chats notify as usual.
+ */
+object QuietReels {
+    private val link = Regex("instagram\\.com/(?:[^/?#\\s]+/)?(?:reels?|p|tv)/", RegexOption.IGNORE_CASE)
+
+    fun applies(roomId: String, rawEvent: String): Boolean {
+        val raw = runCatching { JSONObject(rawEvent) }.getOrNull() ?: return false
+        val content = raw.optJSONObject("content")?.let { it.optJSONObject("m.new_content") ?: it } ?: return false
+        val isReel = link.containsMatchIn(content.optString("external_url")) || link.containsMatchIn(content.optString("body"))
+        if (!isReel) return false
+        val protocol = app.switchboard.core.Bridges.get(roomId)?.protocol.orEmpty()
+        return protocol.contains("instagram", true) || protocol.contains("meta", true) ||
+            app.switchboard.core.Bridges.guess(listOf(raw.optString("sender"))) == "Instagram"
     }
 }
 
