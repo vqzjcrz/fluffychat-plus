@@ -117,6 +117,7 @@ fun SpaceView(spaceId: String) {
     var reordering by remember(spaceId) { mutableStateOf(false) }
     var spaceMenu by remember { mutableStateOf(false) }
     var categoryMenu by remember { mutableStateOf<SpaceCategory?>(null) }
+    var defaultCollapsed by remember(spaceId) { mutableStateOf(Prefs.getString("default_cat_collapsed_$spaceId") != null) }
     var renameCategory by remember { mutableStateOf<SpaceCategory?>(null) }
     var deleteCategory by remember { mutableStateOf<SpaceCategory?>(null) }
     var leaveSpace by remember { mutableStateOf(false) }
@@ -183,8 +184,22 @@ fun SpaceView(spaceId: String) {
                                 )
                             }
                             if (!block.collapsed) roomItems(block.rooms, spaceId, plus, isDiscord, keyPrefix = "c")
+                        } else if (hasCategories) {
+                            // Chats without a custom category get their own default category.
+                            if (block.rooms.isNotEmpty()) {
+                                item(key = "uncat") {
+                                    CategoryHeader(
+                                        name = if (isDiscord) "Channels" else "Chats", collapsed = defaultCollapsed, count = block.rooms.size,
+                                        onToggle = {
+                                            defaultCollapsed = !defaultCollapsed
+                                            Prefs.putString("default_cat_collapsed_$spaceId", if (defaultCollapsed) "1" else null)
+                                        },
+                                        onMenu = null,
+                                    )
+                                }
+                                if (!defaultCollapsed) roomItems(block.rooms, spaceId, plus, isDiscord, keyPrefix = "u")
+                            }
                         } else {
-                            if (hasCategories && block.rooms.isNotEmpty()) item(key = "uncat") { Spacer(Modifier.height(8.dp)) }
                             roomItems(block.rooms, spaceId, plus, isDiscord, keyPrefix = "u")
                         }
                     }

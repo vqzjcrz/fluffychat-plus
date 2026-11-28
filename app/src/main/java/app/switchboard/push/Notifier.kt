@@ -18,7 +18,13 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
+import androidx.core.content.LocusIdCompat
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import androidx.compose.ui.graphics.toArgb
+import app.switchboard.ui.common.colorFor
+import app.switchboard.ui.common.initialOf
 import app.switchboard.MainActivity
 import app.switchboard.R
 import app.switchboard.core.Mxc
@@ -45,6 +51,7 @@ object Notifier {
     @Volatile var activeRoom: String? = null
 
     private data class Line(val sender: String, val senderId: String, val text: String, val ts: Long, val icon: IconCompat?)
+    private const val PIC = 128
     private val history = HashMap<String, MutableList<Line>>()
 
     fun createChannels(context: Context) {
@@ -74,8 +81,10 @@ object Notifier {
         )
         when (val ev = item.event) {
             is NotificationEvent.Invite -> {
+                val pic = withTimeoutOrNull(3000) { picture(roomAvatarUrl(roomId, item), roomName, roomId) } ?: letter(roomName, roomId)
                 val n = NotificationCompat.Builder(context, CH_INVITES)
                     .setSmallIcon(R.drawable.ic_notification)
+                    .setLargeIcon(pic)
                     .setContentTitle(roomName)
                     .setContentText("$senderName invited you")
                     .setContentIntent(open).setAutoCancel(true)
@@ -86,10 +95,20 @@ object Notifier {
             is NotificationEvent.Timeline -> {
                 val content = ev.event.content()
                 val text = (content as? TimelineEventContent.MessageLike)?.content?.let { Previews.notificationBody(it) } ?: return
-                val icon = withTimeoutOrNull(3000) { avatarIcon(item.senderInfo.avatarUrl) }
+                val senderId = ev.event.senderId()
+                val senderPic = withTimeoutOrNull(3000) { picture(item.senderInfo.avatarUrl, senderName, senderId) } ?: letter(senderName, senderId)
+                val icon = IconCompat.createWithBitmap(senderPic)
+                // The chat's own picture (or its space's) stands in for the app icon.
+                val chatPic = if (item.roomInfo.isDirect) null
+                    else withTimeoutOrNull(3000) { picture(roomAvatarUrl(roomId, item), roomName, roomId) } ?: letter(roomName, roomId)
+                val chatIcon = chatPic?.let { IconCompat.createWithBitmap(it) } ?: icon
+                val shortcut = publishShortcut(
+                    context, roomId, if (item.roomInfo.isDirect) senderName else roomName, chatIcon,
+                    if (item.roomInfo.isDirect) Person.Builder().setName(senderName).setKey(senderId).setIcon(icon).build() else null,
+                )
                 val lines = synchronized(history) {
                     history.getOrPut(roomId) { mutableListOf() }.also {
-                        it += Line(senderName, ev.event.senderId(), text, ev.event.timestamp().toLong(), icon)
+                        it += Line(senderName, senderId, text, ev.event.timestamp().toLong(), icon)
                         while (it.size > 8) it.removeAt(0)
                     }.toList()
                 }
@@ -121,6 +140,10 @@ object Notifier {
                 val n = NotificationCompat.Builder(context, if (noisy) CH_MESSAGES else CH_QUIET)
                     .setSmallIcon(R.drawable.ic_notification)
                     .setStyle(style)
+                    .apply {
+                        if (shortcut) setShortcutId(roomId).setLocusId(LocusIdCompat(roomId))
+                        if (android.os.Build.VERSION.SDK_INT < 30 || !shortcut) setLargeIcon(chatPic ?: senderPic)
+                    }
                     .setContentIntent(open)
                     .setAutoCancel(true)
                     .setCategory(NotificationCompat.CATEGORY_MESSAGE)
@@ -141,12 +164,55 @@ object Notifier {
         }
     }
 
-    private suspend fun avatarIcon(url: String?): IconCompat? {
-        val mxc = Mxc.avatar(url, 128) ?: return null
-        val bytes = runCatching { Sb.matrix.client?.getMediaThumbnail(mxc.source(), 128u, 128u) }.getOrNull() ?: return null
+    /** A chat's picture: its own, else its space's (like a Discord server icon). */
+    private fun roomAvatarUrl(roomId: String, item: NotificationItem): String? =
+        item.roomInfo.avatarUrl ?: Sb.matrix.summary(roomId)?.avatarUrl
+            ?: Sb.matrix.spaceChildren.value.entries.firstOrNull { (_, kids) -> kids.any { it.roomId == roomId } }
+                ?.key?.let { Sb.matrix.summary(it)?.avatarUrl }
+
+    /** Round picture from an mxc:// avatar, or null if there's none or it can't load. */
+    private suspend fun picture(url: String?, name: String, key: String): Bitmap? {
+        val mxc = Mxc.avatar(url, PIC) ?: return null
+        val bytes = runCatching { Sb.matrix.client?.getMediaThumbnail(mxc.source(), PIC.toULong(), PIC.toULong()) }.getOrNull() ?: return null
         val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
-        return IconCompat.createWithBitmap(circle(bmp))
+        return circle(bmp)
     }
+
+    /** Initial on a colored circle, matching the avatars in the app. */
+    private fun letter(name: String, key: String): Bitmap {
+        val out = Bitmap.createBitmap(PIC, PIC, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        canvas.drawCircle(PIC / 2f, PIC / 2f, PIC / 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = colorFor(key).toArgb() })
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+            textSize = PIC * 0.42f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            textAlign = Paint.Align.CENTER
+        }
+        val y = PIC / 2f - (text.descent() + text.ascent()) / 2f
+        canvas.drawText(initialOf(name), PIC / 2f, y, text)
+        return out
+    }
+
+    /**
+     * Publishes the chat as a conversation shortcut. Android then shows the chat's picture
+     * on its notifications instead of the app icon, and lists it under Conversations.
+     */
+    private fun publishShortcut(context: Context, roomId: String, name: String, icon: IconCompat, person: Person?): Boolean = runCatching {
+        val intent = Intent(context, MainActivity::class.java).setAction(Intent.ACTION_VIEW).putExtra(MainActivity.EXTRA_ROOM_ID, roomId)
+        val label = name.ifBlank { "Chat" }
+        val info = ShortcutInfoCompat.Builder(context, roomId)
+            .setShortLabel(label.take(25))
+            .setLongLabel(label)
+            .setIcon(icon)
+            .setIntent(intent)
+            .setLongLived(true)
+            .setLocusId(LocusIdCompat(roomId))
+            .apply { if (person != null) setPerson(person) }
+            .build()
+        ShortcutManagerCompat.pushDynamicShortcut(context, info)
+        true
+    }.getOrDefault(false)
 
     private fun circle(src: Bitmap): Bitmap {
         val size = minOf(src.width, src.height)
