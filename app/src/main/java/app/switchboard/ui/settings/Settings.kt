@@ -228,6 +228,8 @@ fun SettingsChatScreen() {
     val hide by Prefs.hideStateEvents.collectAsState()
     val gifs by Prefs.autoplayGifs.collectAsState()
     val previews by Prefs.linkPreviews.collectAsState()
+    val doubleTap by Prefs.doubleTapReaction.collectAsState()
+    var pickReaction by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Sbt.c.background)) {
         ScreenHeader("Chats", onBack = { nav.pop() })
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -241,7 +243,23 @@ fun SettingsChatScreen() {
             ToggleRow("Hide joins, leaves and other changes", null, hide) { Prefs.setHideStateEvents(it) }
             ToggleRow("Play GIFs automatically", null, gifs) { Prefs.setAutoplayGifs(it) }
             ToggleRow("Link previews", "Your server fetches the page; pictures are re-made by your server before they reach your phone", previews) { Prefs.setLinkPreviews(it) }
+            ToggleRow("Double-tap to react", null, doubleTap.isNotEmpty()) { Prefs.setDoubleTapReaction(if (it) "\u2764\uFE0F" else "") }
+            if (doubleTap.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { pickReaction = true }.padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Double-tap reaction", style = Sbt.body, color = Sbt.c.text)
+                        Text("Tap to choose the emoji", style = Sbt.small, color = Sbt.c.textMuted)
+                    }
+                    Text(doubleTap, fontSize = 26.sp)
+                }
+            }
         }
+    }
+    if (pickReaction) {
+        app.switchboard.ui.chat.EmojiPickerSheet(onDismiss = { pickReaction = false }) { Prefs.setDoubleTapReaction(it); pickReaction = false }
     }
 }
 

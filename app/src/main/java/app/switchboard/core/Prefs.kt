@@ -22,6 +22,7 @@ object Prefs {
         _hideStateEvents.value = sp.getBoolean(KEY_HIDE_STATE, true)
         _autoplayGifs.value = sp.getBoolean(KEY_GIFS, true)
         _linkPreviews.value = sp.getBoolean(KEY_PREVIEWS, true)
+        _doubleTapReaction.value = sp.getString(KEY_DOUBLE_TAP, "\u2764\uFE0F") ?: ""
         _railLabels.value = sp.getBoolean(KEY_RAIL_LABELS, false)
     }
 
@@ -34,6 +35,7 @@ object Prefs {
     private const val KEY_HIDE_STATE = "hide_state_events"
     private const val KEY_GIFS = "autoplay_gifs"
     private const val KEY_PREVIEWS = "link_previews"
+    private const val KEY_DOUBLE_TAP = "double_tap_reaction"
     private const val KEY_RAIL_LABELS = "rail_labels"
 
     private val _theme = MutableStateFlow("mono")
@@ -72,6 +74,11 @@ object Prefs {
     private val _linkPreviews = MutableStateFlow(true)
     val linkPreviews: StateFlow<Boolean> = _linkPreviews
     fun setLinkPreviews(v: Boolean) { _linkPreviews.value = v; sp.edit().putBoolean(KEY_PREVIEWS, v).apply() }
+
+    /** Emoji to react with when double-tapping a message; empty turns it off. */
+    private val _doubleTapReaction = MutableStateFlow("\u2764\uFE0F")
+    val doubleTapReaction: StateFlow<String> = _doubleTapReaction
+    fun setDoubleTapReaction(v: String) { _doubleTapReaction.value = v; sp.edit().putString(KEY_DOUBLE_TAP, v).apply() }
 
     private val _railLabels = MutableStateFlow(false)
     val railLabels: StateFlow<Boolean> = _railLabels

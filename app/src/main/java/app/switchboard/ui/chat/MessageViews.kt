@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -186,6 +187,8 @@ fun MessageItem(
     val density = LocalDensity.current
     val threshold = with(density) { 64.dp.toPx() }
     val hit = remember(ev.key) { TextHit() }
+    val currentEv by rememberUpdatedState(ev)
+    val currentCb by rememberUpdatedState(cb)
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
@@ -196,19 +199,25 @@ fun MessageItem(
             .pointerInput(ev.key) {
                 // Long press: on a word, text selection takes over; on a link, share it;
                 // anywhere else on the row, open the message's actions.
+                // Double tap (anywhere that isn't a button, link or media): react.
+                var lastTapUp = 0L
+                var lastTapPos = Offset.Zero
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     val target = hit.at(down.position, 6.dp.toPx())
                     hit.selectable = target == TextHit.Word
-                    if (target == TextHit.Word) return@awaitEachGesture
                     val link = (target as? TextHit.Link)?.url
+                    var tapUp = -1L
                     val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis - 60) {
                         while (true) {
                             val e = awaitPointerEvent(PointerEventPass.Initial)
                             val ch = e.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
                             if (!ch.pressed) {
                                 // A tap on a link opens it here, so it still works while selection is switched.
-                                if (link != null) { ch.consume(); cb.onLink(link) }
+                                if (link != null) { ch.consume(); currentCb.onLink(link); return@withTimeoutOrNull false }
+                                // Let buttons, reactions and media see the tap first; a tap they used isn't ours.
+                                val fin = awaitPointerEvent(PointerEventPass.Final)
+                                if (fin.changes.firstOrNull { it.id == down.id }?.isConsumed == false) tapUp = ch.uptimeMillis
                                 return@withTimeoutOrNull true
                             }
                             if ((ch.position - down.position).getDistance() > viewConfiguration.touchSlop) return@withTimeoutOrNull false
@@ -216,12 +225,31 @@ fun MessageItem(
                         @Suppress("UNREACHABLE_CODE") false
                     }
                     if (outcome == null) {
+                        lastTapUp = 0L
+                        if (target == TextHit.Word) return@awaitEachGesture
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (link != null) shareText(context, link) else cb.onLongPress(ev)
+                        if (link != null) shareText(context, link) else currentCb.onLongPress(currentEv)
                         do {
                             val e = awaitPointerEvent(PointerEventPass.Initial)
                             e.changes.forEach { it.consume() }
                         } while (e.changes.any { it.pressed })
+                    } else if (tapUp >= 0) {
+                        val isDouble = lastTapUp > 0 && down.uptimeMillis - lastTapUp <= viewConfiguration.doubleTapTimeoutMillis &&
+                            (down.position - lastTapPos).getDistance() < 48.dp.toPx()
+                        if (isDouble) {
+                            lastTapUp = 0L
+                            val emoji = Prefs.doubleTapReaction.value
+                            val e = currentEv
+                            if (emoji.isNotEmpty() && e.eventId != null && e.reactions.none { it.key == emoji && it.mine }) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                currentCb.onReact(e, emoji)
+                            }
+                        } else {
+                            lastTapUp = tapUp
+                            lastTapPos = down.position
+                        }
+                    } else {
+                        lastTapUp = 0L
                     }
                 }
             }
