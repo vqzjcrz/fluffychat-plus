@@ -52,6 +52,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
@@ -67,25 +71,36 @@ import app.switchboard.ui.theme.Sbt
 
 val quickReactions = listOf("👍", "❤️", "😂", "😮", "😢", "🙏", "🔥")
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Full-height emoji picker. It's a plain dialog rather than a bottom sheet: a sheet's
+ * drag gesture fights the picker's own scrolling, so the list couldn't scroll.
+ */
 @Composable
 fun EmojiPickerSheet(onDismiss: () -> Unit, onPick: (String) -> Unit) {
-    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val light = Sbt.c.isLight
-    // Most of the screen, so the whole picker is open; the list scrolls inside it.
-    val height = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.8f).dp
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = Sbt.c.surface) {
-        AndroidView(
-            factory = { ctx ->
-                val themed = android.view.ContextThemeWrapper(ctx, if (light) app.switchboard.R.style.Theme_Switchboard_PickerLight else app.switchboard.R.style.Theme_Switchboard_Picker)
-                EmojiPickerView(themed).apply {
-                    setOnEmojiPickedListener { item -> onPick(item.emoji); onDismiss() }
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(height)
-                .nestedScroll(androidx.compose.ui.platform.rememberNestedScrollInteropConnection())
-                .navigationBarsPadding(),
-        )
+    val c = Sbt.c
+    val light = c.isLight
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal = 12.dp)
+                .clip(RoundedCornerShape(20.dp)).background(c.surface),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 6.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Pick an emoji", style = Sbt.body, color = c.text, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, "Close", tint = c.textMuted) }
+            }
+            AndroidView(
+                factory = { ctx ->
+                    val themed = android.view.ContextThemeWrapper(ctx, if (light) app.switchboard.R.style.Theme_Switchboard_PickerLight else app.switchboard.R.style.Theme_Switchboard_Picker)
+                    EmojiPickerView(themed).apply {
+                        setOnEmojiPickedListener { item -> onPick(item.emoji); onDismiss() }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().weight(1f),
+            )
+        }
     }
 }
 

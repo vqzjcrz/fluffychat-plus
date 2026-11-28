@@ -119,7 +119,11 @@ object Notifier {
                 lines.forEach { l ->
                     style.addMessage(l.text, l.ts, Person.Builder().setName(l.sender).setKey(l.senderId).setIcon(l.icon).build())
                 }
-                val noisy = item.isNoisy ?: true
+                // Everything your server pushes alerts, like FluffyChat did. The server only marks
+                // one-to-one rooms as "noisy", and bridged DMs have the bridge bot as a third
+                // member, so they'd otherwise land silently in the shade. Mute or set a chat to
+                // mentions-only to quiet it.
+                val noisy = true
                 val reply = NotificationCompat.Action.Builder(
                     R.drawable.ic_notification, "Reply",
                     PendingIntent.getBroadcast(
